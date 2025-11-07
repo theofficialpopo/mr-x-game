@@ -33,7 +33,16 @@ export function MapboxBoard({
     if (map.current) return; // Already initialized
     if (!mapContainer.current) return;
 
-    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+    // Check for Mapbox token
+    const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+    if (!token) {
+      console.error('❌ Mapbox token not found!');
+      console.error('💡 Make sure VITE_MAPBOX_ACCESS_TOKEN is set in .env');
+      console.error('🔄 Restart the dev server after adding the token: pnpm dev');
+      return;
+    }
+
+    mapboxgl.accessToken = token;
 
     // Get center from first station with geo coordinates
     const centerStation = stations.find(s => s.geoCoordinates);
