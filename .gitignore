@@ -49,3 +49,4 @@ prisma/migrations/
 *.tmp
 *.temp
 ISSUE_TEMPLATE.md
+.worktrees
