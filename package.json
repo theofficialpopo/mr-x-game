@@ -5,9 +5,6 @@
   "description": "Scotland Yard board game web implementation with real map data",
   "author": "theofficialpopo",
   "license": "MIT",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "dev": "concurrently \"pnpm --filter client dev\" \"pnpm --filter server dev\"",
     "dev:client": "pnpm --filter client dev",
