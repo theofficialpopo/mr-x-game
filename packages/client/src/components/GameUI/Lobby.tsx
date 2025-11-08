@@ -1,18 +1,29 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { socketService } from '../../services/socket';
+import { setGameId as saveGameIdToSession, setPlayerName as savePlayerNameToSession, getSession, hasActiveSessionForGame, clearSession } from '../../services/session';
 import type { LobbyState } from '@shared';
 
 interface LobbyProps {
   onGameStart: () => void;
+  initialGameId?: string;
 }
 
-export function Lobby({ onGameStart }: LobbyProps) {
-  const [mode, setMode] = useState<'menu' | 'create' | 'join' | 'waiting'>('menu');
+export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
+  const navigate = useNavigate();
+
+  // Check if we should auto-reconnect
+  const session = getSession();
+  const shouldAutoReconnect = initialGameId && hasActiveSessionForGame(initialGameId);
+
+  const [mode, setMode] = useState<'menu' | 'create' | 'join' | 'waiting'>(
+    shouldAutoReconnect ? 'waiting' : (initialGameId ? 'join' : 'menu')
+  );
   const [playerName, setPlayerName] = useState('');
-  const [gameId, setGameId] = useState('');
+  const [gameId, setGameId] = useState(initialGameId || '');
   const [lobby, setLobby] = useState<LobbyState | null>(null);
   const [error, setError] = useState('');
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(shouldAutoReconnect);
 
   useEffect(() => {
     // Listen for lobby updates
@@ -33,6 +44,65 @@ export function Lobby({ onGameStart }: LobbyProps) {
     };
   }, []);
 
+  // Auto-reconnect from main lobby or game URL
+  useEffect(() => {
+    const tryReconnect = async () => {
+      const session = getSession();
+
+      // If on main lobby and have active session, redirect to game URL
+      if (!initialGameId && session.gameId && session.playerName) {
+        console.log(`[Reconnect] Found active session for game ${session.gameId}, redirecting...`);
+        navigate(`/${session.gameId}`);
+        return;
+      }
+
+      // If on game URL, check if we have a valid session
+      if (initialGameId) {
+        const hasSession = session.gameId === initialGameId && session.playerName !== null;
+
+        if (!hasSession) {
+          // No valid session for this game - redirect to lobby
+          console.log(`[Reconnect] No valid session for game ${initialGameId}, redirecting to lobby`);
+          navigate('/');
+          return;
+        }
+
+        // Have valid session - try to reconnect
+        if (session.playerName) {
+          console.log(`[Reconnect] Attempting to rejoin game ${initialGameId} as ${session.playerName}`);
+          setIsConnecting(true);
+
+          // Wait for socket to connect if not connected
+          let attempts = 0;
+          while (!socketService.isConnected() && attempts < 20) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+          }
+
+          if (!socketService.isConnected()) {
+            console.log('[Reconnect] Connection timeout - clearing session and redirecting to lobby');
+            clearSession();
+            navigate('/');
+            return;
+          }
+
+          // Automatically join the game
+          const response = await socketService.joinGame(initialGameId, session.playerName);
+
+          if (!response.success) {
+            console.log('[Reconnect] Failed:', response.error, '- clearing session and redirecting to lobby');
+            clearSession();
+            navigate('/');
+          } else {
+            console.log('[Reconnect] Success!');
+          }
+        }
+      }
+    };
+
+    tryReconnect();
+  }, [initialGameId, navigate]);
+
   const handleCreateGame = async () => {
     if (!playerName.trim()) {
       setError('Please enter your name');
@@ -42,10 +112,19 @@ export function Lobby({ onGameStart }: LobbyProps) {
     setIsConnecting(true);
     setError('');
 
+    console.log('[Lobby] Creating game for player:', playerName.trim());
     const response = await socketService.createGame(playerName.trim());
 
     if (response.success && response.gameId) {
+      console.log('[Lobby] Game created:', response.gameId);
+      // Save to session for reconnection
+      saveGameIdToSession(response.gameId);
+      savePlayerNameToSession(playerName.trim());
+      // Also set local state
       setGameId(response.gameId);
+      // Navigate to game URL
+      navigate(`/${response.gameId}`);
+      console.log('[Lobby] Navigated to game URL');
       // Lobby update will come via socket event
     } else {
       setError(response.error || 'Failed to create game');
@@ -67,9 +146,18 @@ export function Lobby({ onGameStart }: LobbyProps) {
     setIsConnecting(true);
     setError('');
 
+    console.log('[Lobby] Joining game:', gameId.trim().toUpperCase(), 'as', playerName.trim());
     const response = await socketService.joinGame(gameId.trim().toUpperCase(), playerName.trim());
 
     if (response.success) {
+      const normalizedGameId = gameId.trim().toUpperCase();
+      console.log('[Lobby] Successfully joined game:', normalizedGameId);
+      // Save to session for reconnection
+      saveGameIdToSession(normalizedGameId);
+      savePlayerNameToSession(playerName.trim());
+      // Navigate to game URL
+      navigate(`/${normalizedGameId}`);
+      console.log('[Lobby] Navigated to game URL');
       // Lobby update will come via socket event
     } else {
       setError(response.error || 'Failed to join game');
@@ -244,6 +332,24 @@ export function Lobby({ onGameStart }: LobbyProps) {
     );
   }
 
+  // Loading screen while reconnecting
+  if (mode === 'waiting' && !lobby) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full space-y-6">
+          <div className="bg-black bg-opacity-60 backdrop-blur-sm rounded-lg p-6 space-y-4 border border-gray-700">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+              <h2 className="text-2xl font-semibold mb-2">Reconnecting...</h2>
+              <p className="text-gray-400">Joining game {gameId}</p>
+              {playerName && <p className="text-gray-400 mt-2">as {playerName}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Waiting lobby
   if (mode === 'waiting' && lobby) {
     const me = lobby.players.find(p => p.id === socketService.getSocketId());
@@ -252,7 +358,7 @@ export function Lobby({ onGameStart }: LobbyProps) {
     const canStart = isHost && lobby.players.length >= 2 && allReady;
 
     const handleCopyInvite = () => {
-      const inviteUrl = `${window.location.origin}?join=${lobby.gameId}`;
+      const inviteUrl = `${window.location.origin}/${lobby.gameId}`;
       navigator.clipboard.writeText(inviteUrl);
       // You could add a toast notification here
     };

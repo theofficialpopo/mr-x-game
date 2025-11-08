@@ -8,6 +8,7 @@ interface RoundTrackerProps {
   onViewModeChange: (mode: 'svg' | 'mapbox') => void;
   showLegend: boolean;
   onToggleLegend: () => void;
+  onLeaveGame: () => void;
 }
 
 export function RoundTracker({
@@ -15,6 +16,7 @@ export function RoundTracker({
   onViewModeChange,
   showLegend,
   onToggleLegend,
+  onLeaveGame,
 }: RoundTrackerProps) {
   const { round } = useGameStore();
 
@@ -85,6 +87,7 @@ export function RoundTracker({
           onViewModeChange={onViewModeChange}
           showLegend={showLegend}
           onToggleLegend={onToggleLegend}
+          onLeaveGame={onLeaveGame}
         />
       </div>
     </div>
@@ -97,6 +100,7 @@ interface SettingsButtonProps {
   onViewModeChange: (mode: 'svg' | 'mapbox') => void;
   showLegend: boolean;
   onToggleLegend: () => void;
+  onLeaveGame: () => void;
 }
 
 function SettingsButton({
@@ -104,6 +108,7 @@ function SettingsButton({
   onViewModeChange,
   showLegend,
   onToggleLegend,
+  onLeaveGame,
 }: SettingsButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -220,6 +225,23 @@ function SettingsButton({
                     showLegend ? 'translate-x-5' : 'translate-x-0.5'
                   }`}
                 />
+              </div>
+            </button>
+          </div>
+
+          {/* Leave Game */}
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            <button
+              onClick={() => {
+                onLeaveGame();
+                setIsOpen(false);
+              }}
+              className="w-full py-3 px-4 rounded-lg text-sm font-semibold transition flex items-center gap-3 bg-red-500 bg-opacity-20 border border-red-500 text-red-400 hover:bg-opacity-30"
+            >
+              <span className="text-xl">🚪</span>
+              <div className="flex-1 text-left">
+                <div className="font-semibold">Leave Game</div>
+                <div className="text-xs opacity-75">Return to lobby</div>
               </div>
             </button>
           </div>

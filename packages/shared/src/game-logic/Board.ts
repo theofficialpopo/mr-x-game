@@ -39,8 +39,6 @@ export class Board {
         type: conn.type,
       });
     }
-
-    console.log(`Board initialized: ${this.stations.size} stations, ${connections.length} connections`);
   }
 
   /**

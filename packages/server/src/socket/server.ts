@@ -49,7 +49,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
     /**
      * Create a new game room
      */
-    socket.on('lobby:create', async (playerName, callback) => {
+    socket.on('lobby:create', async (playerName, playerUUID, callback) => {
       try {
         if (!boardInstance) {
           callback({ success: false, error: 'Server not ready' });
@@ -63,7 +63,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
         gameRooms.set(gameId, gameRoom);
 
         // Add player to lobby
-        const added = await gameRoom.addPlayer(socket.id, playerName);
+        const added = await gameRoom.addPlayer(socket.id, playerName, playerUUID);
         if (!added) {
           callback({ success: false, error: 'Failed to join game' });
           return;
@@ -95,9 +95,12 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
     /**
      * Join an existing game room
      */
-    socket.on('lobby:join', async (gameId, playerName, callback) => {
+    socket.on('lobby:join', async (gameId, playerName, playerUUID, callback) => {
       try {
+        console.log(`🎯 Join attempt: ${playerName} (${socket.id}) -> game ${gameId}, UUID: ${playerUUID || 'none'}`);
+
         if (!boardInstance) {
+          console.log('❌ Server not ready');
           callback({ success: false, error: 'Server not ready' });
           return;
         }
@@ -105,8 +108,10 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
         // Get or load game room
         let gameRoom = gameRooms.get(gameId);
         if (!gameRoom) {
+          console.log(`🔍 Loading game ${gameId} from database...`);
           gameRoom = await GameRoom.load(gameId, boardInstance);
           if (!gameRoom) {
+            console.log(`❌ Game ${gameId} not found`);
             callback({ success: false, error: 'Game not found' });
             return;
           }
@@ -114,31 +119,45 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
         }
 
         // Add player to lobby
-        const added = await gameRoom.addPlayer(socket.id, playerName);
+        console.log(`➕ Adding player ${playerName} to game ${gameId}...`);
+        const added = await gameRoom.addPlayer(socket.id, playerName, playerUUID);
         if (!added) {
+          console.log(`❌ Failed to add player ${playerName} to game ${gameId}`);
           callback({ success: false, error: 'Game is full' });
           return;
         }
+        console.log(`✅ Player ${playerName} added to game ${gameId}`);
 
         // Join socket room
         await socket.join(gameId);
 
-        // Get lobby state
+        // Check if game is in lobby or already started
         const lobby = await gameRoom.getLobby();
-        if (!lobby) {
-          callback({ success: false, error: 'Game already started' });
-          return;
+
+        if (lobby) {
+          // Game is in lobby phase
+          callback({
+            success: true,
+            playerId: socket.id,
+            lobby,
+          });
+
+          // Broadcast lobby update to all players
+          io.to(gameId).emit('lobby:updated', lobby);
+        } else {
+          // Game has already started - send game state instead
+          callback({
+            success: true,
+            playerId: socket.id,
+          });
+
+          // Send current game state to the reconnecting player
+          const clientState = await gameRoom.getClientGameState(socket.id);
+          if (clientState) {
+            socket.emit('game:state', clientState);
+            console.log(`📤 Sent game state to reconnecting player ${playerName}`);
+          }
         }
-
-        // Send success response
-        callback({
-          success: true,
-          playerId: socket.id,
-          lobby,
-        });
-
-        // Broadcast lobby update to all players
-        io.to(gameId).emit('lobby:updated', lobby);
 
         console.log(`👤 ${playerName} joined game ${gameId}`);
       } catch (error) {
@@ -150,29 +169,39 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
     /**
      * Leave game room
      */
-    socket.on('lobby:leave', async () => {
+    socket.on('lobby:leave', async (callback) => {
       try {
         const gameId = await getPlayerGameId(socket.id);
-        if (!gameId) return;
 
-        const gameRoom = gameRooms.get(gameId);
-        if (!gameRoom) return;
-
-        await gameRoom.removePlayer(socket.id);
-        await socket.leave(gameId);
-
-        // Broadcast lobby update
-        const lobby = await gameRoom.getLobby();
-        if (lobby) {
-          io.to(gameId).emit('lobby:updated', lobby);
-        } else {
-          // Game was destroyed
-          gameRooms.delete(gameId);
+        if (!gameId) {
+          callback();
+          return;
         }
 
-        console.log(`👋 Player ${socket.id} left game ${gameId}`);
+        const gameRoom = gameRooms.get(gameId);
+        if (!gameRoom) {
+          callback();
+          return;
+        }
+
+        const gameDestroyed = await gameRoom.removePlayer(socket.id);
+        await socket.leave(gameId);
+
+        if (gameDestroyed) {
+          // Game was destroyed - remove from memory
+          gameRooms.delete(gameId);
+        } else {
+          // Game still has players - broadcast lobby update if in lobby phase
+          const lobby = await gameRoom.getLobby();
+          if (lobby) {
+            io.to(gameId).emit('lobby:updated', lobby);
+          }
+        }
+
+        callback();
       } catch (error) {
         console.error('Error leaving game:', error);
+        callback();
       }
     });
 
@@ -376,27 +405,9 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
     socket.on('disconnect', async () => {
       console.log(`🔌 Client disconnected: ${socket.id}`);
 
-      try {
-        const gameId = await getPlayerGameId(socket.id);
-        if (!gameId) return;
-
-        const gameRoom = gameRooms.get(gameId);
-        if (!gameRoom) return;
-
-        // Remove player from game
-        await gameRoom.removePlayer(socket.id);
-
-        // Broadcast lobby update if game still exists
-        const lobby = await gameRoom.getLobby();
-        if (lobby) {
-          io.to(gameId).emit('lobby:updated', lobby);
-        } else {
-          // Game was destroyed
-          gameRooms.delete(gameId);
-        }
-      } catch (error) {
-        console.error('Error handling disconnect:', error);
-      }
+      // Don't remove players on disconnect - allow reconnection
+      // Players are only removed when they explicitly leave via 'lobby:leave'
+      console.log(`💾 Keeping player data for reconnection`);
     });
   });
 

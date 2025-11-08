@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS games (
 -- Players table - stores player information for games
 CREATE TABLE IF NOT EXISTS players (
   id VARCHAR(50) PRIMARY KEY,
+  player_uuid VARCHAR(36),
   game_id VARCHAR(6) NOT NULL REFERENCES games(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
   role VARCHAR(20) CHECK (role IN ('mr-x', 'detective')),

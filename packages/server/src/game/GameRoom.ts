@@ -69,17 +69,65 @@ export class GameRoom {
   /**
    * Add player to lobby
    */
-  async addPlayer(playerId: string, playerName: string): Promise<boolean> {
+  async addPlayer(playerId: string, playerName: string, playerUUID?: string): Promise<boolean> {
     // Get current game
     const game = await sql`
       SELECT * FROM games WHERE id = ${this.gameId}
     `;
 
-    if (game.length === 0 || game[0].phase !== 'waiting') {
+    if (game.length === 0) {
       return false;
     }
 
-    // Check if player already exists
+    // Check if player is reconnecting (by UUID or by name for legacy support)
+    let existingPlayer = null;
+
+    // First try to find by UUID
+    if (playerUUID) {
+      console.log(`[addPlayer] Checking for existing player with UUID ${playerUUID} in game ${this.gameId}`);
+      const byUUID = await sql`
+        SELECT * FROM players WHERE player_uuid = ${playerUUID} AND game_id = ${this.gameId}
+      `;
+      console.log(`[addPlayer] Found ${byUUID.length} players by UUID`);
+      if (byUUID.length > 0) {
+        existingPlayer = byUUID[0];
+        console.log(`[addPlayer] Found existing player by UUID:`, existingPlayer.name);
+      }
+    }
+
+    // If not found by UUID, try by name (for backwards compatibility)
+    if (!existingPlayer) {
+      console.log(`[addPlayer] Checking for existing player with name ${playerName} in game ${this.gameId}`);
+      const byName = await sql`
+        SELECT * FROM players WHERE name = ${playerName} AND game_id = ${this.gameId}
+      `;
+      console.log(`[addPlayer] Found ${byName.length} players by name`);
+      if (byName.length > 0) {
+        existingPlayer = byName[0];
+        console.log(`[addPlayer] Found existing player by name:`, existingPlayer.name, 'UUID:', existingPlayer.player_uuid);
+      }
+    }
+
+    // If player exists, update their socket ID and UUID
+    if (existingPlayer) {
+      console.log(`[addPlayer] Reconnecting player ${playerName}, updating socket ID from ${existingPlayer.id} to ${playerId}`);
+      await sql`
+        UPDATE players
+        SET id = ${playerId}, player_uuid = ${playerUUID || null}
+        WHERE name = ${playerName} AND game_id = ${this.gameId}
+      `;
+      console.log(`🔄 Player ${playerName} (UUID: ${playerUUID || 'legacy'}) reconnected to game ${this.gameId} (phase: ${game[0].phase})`);
+      return true;
+    }
+
+    console.log(`[addPlayer] No existing player found, checking if new player can join...`);
+
+    // Only allow new players during 'waiting' phase
+    if (game[0].phase !== 'waiting') {
+      return false;
+    }
+
+    // Check if player with same socket ID already exists
     const existing = await sql`
       SELECT * FROM players WHERE id = ${playerId} AND game_id = ${this.gameId}
     `;
@@ -104,9 +152,10 @@ export class GameRoom {
 
     // Add player (host is automatically ready)
     await sql`
-      INSERT INTO players (id, game_id, name, position, is_host, is_ready, tickets, player_order)
+      INSERT INTO players (id, player_uuid, game_id, name, position, is_host, is_ready, tickets, player_order)
       VALUES (
         ${playerId},
+        ${playerUUID || null},
         ${this.gameId},
         ${playerName},
         0,
@@ -117,19 +166,21 @@ export class GameRoom {
       )
     `;
 
-    console.log(`👤 Player ${playerName} joined game ${this.gameId}`);
+    console.log(`👤 Player ${playerName} (UUID: ${playerUUID || 'none'}) joined game ${this.gameId}`);
     return true;
   }
 
   /**
    * Remove player from lobby
    */
-  async removePlayer(playerId: string): Promise<void> {
+  async removePlayer(playerId: string): Promise<boolean> {
     const player = await sql`
       SELECT * FROM players WHERE id = ${playerId} AND game_id = ${this.gameId}
     `;
 
-    if (player.length === 0) return;
+    if (player.length === 0) {
+      return false;
+    }
 
     // Delete player
     await sql`
@@ -145,6 +196,8 @@ export class GameRoom {
     if (remainingPlayers.length === 0) {
       // Delete game if no players left
       await this.destroy();
+      console.log(`🗑️ Destroyed game ${this.gameId} - all players left`);
+      return true; // Game was destroyed
     } else if (player[0].is_host) {
       // Assign new host if host left (and set them as ready)
       await sql`
@@ -156,7 +209,7 @@ export class GameRoom {
       `;
     }
 
-    console.log(`👤 Player ${playerId} left game ${this.gameId}`);
+    return false; // Game still has players
   }
 
   /**

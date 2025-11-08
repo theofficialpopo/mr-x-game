@@ -25,6 +25,7 @@ export interface TicketCounts {
  */
 export interface Player {
   id: string;
+  playerUUID?: string; // UUID for session-based reconnection
   name: string;
   role: PlayerRole;
   position: number; // Current station ID

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import { Lobby } from './components/GameUI/Lobby';
 import { RoundTracker } from './components/GameUI/RoundTracker';
 import { PlayerPanel } from './components/GameUI/PlayerPanel';
@@ -8,18 +9,23 @@ import { GameOver } from './components/GameUI/GameOver';
 import { useBoardData } from './hooks/useBoardData';
 import { useGameStore } from './store/gameStore';
 import { socketService } from './services/socket';
+import { getSession, hasActiveSessionForGame, initializeSessionCleanup, clearSession } from './services/session';
 
 type ViewMode = 'svg' | 'mapbox';
 
-function App() {
+// Game container component - handles all game logic
+function GameContainer({ gameIdFromUrl }: { gameIdFromUrl?: string }) {
   const { boardData, board, loading, error } = useBoardData();
   const { phase, setBoard, initializeWebSocket, cleanupWebSocket, resetGame } = useGameStore();
   const [viewMode, setViewMode] = useState<ViewMode>('svg');
   const [showLegend, setShowLegend] = useState(true);
+  const navigate = useNavigate();
 
-  const handleBackToLobby = () => {
-    socketService.leaveGame();
+  const handleBackToLobby = async () => {
+    await socketService.leaveGame();
+    clearSession();
     resetGame();
+    navigate('/');
   };
 
   // Set board reference in game store when loaded
@@ -68,7 +74,7 @@ function App() {
 
   // Show lobby screen
   if (phase === 'setup') {
-    return <Lobby onGameStart={() => {}} />;
+    return <Lobby onGameStart={() => {}} initialGameId={gameIdFromUrl} />;
   }
 
   // Show game board with new layout
@@ -80,6 +86,7 @@ function App() {
         onViewModeChange={setViewMode}
         showLegend={showLegend}
         onToggleLegend={() => setShowLegend(!showLegend)}
+        onLeaveGame={handleBackToLobby}
       />
 
       {/* Main Game Area */}
@@ -104,6 +111,27 @@ function App() {
         )}
       </div>
     </div>
+  );
+}
+
+// Wrapper component to extract gameId from URL params
+function GameWithParams() {
+  const { gameId } = useParams<{ gameId: string }>();
+  return <GameContainer gameIdFromUrl={gameId} />;
+}
+
+// Main App component with routing
+function App() {
+  // Initialize session cleanup on app mount
+  useEffect(() => {
+    initializeSessionCleanup();
+  }, []);
+
+  return (
+    <Routes>
+      <Route path="/" element={<GameContainer />} />
+      <Route path="/:gameId" element={<GameWithParams />} />
+    </Routes>
   );
 }
 

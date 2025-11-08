@@ -6,15 +6,18 @@ import type { TransportType } from './board';
  */
 export interface ClientToServerEvents {
   // Lobby management
-  'lobby:create': (playerName: string, callback: (response: CreateGameResponse) => void) => void;
-  'lobby:join': (gameId: string, playerName: string, callback: (response: JoinGameResponse) => void) => void;
-  'lobby:leave': () => void;
+  'lobby:create': (playerName: string, playerUUID: string, callback: (response: CreateGameResponse) => void) => void;
+  'lobby:join': (gameId: string, playerName: string, playerUUID: string, callback: (response: JoinGameResponse) => void) => void;
+  'lobby:leave': (callback: () => void) => void;
   'lobby:ready': (isReady: boolean) => void;
   'lobby:start': () => void;
 
   // Game actions
   'game:move': (stationId: number, transport: TransportType, callback: (response: MoveResponse) => void) => void;
   'game:surrender': () => void;
+
+  // Rematch
+  'rematch:ready': (isReady: boolean) => void;
 }
 
 /**
@@ -31,6 +34,9 @@ export interface ServerToClientEvents {
   'game:round:complete': (round: number) => void;
   'game:ended': (result: GameEndResult) => void;
   'game:error': (error: string) => void;
+
+  // Rematch
+  'rematch:ready:updated': (readyPlayers: string[]) => void;
 }
 
 /**

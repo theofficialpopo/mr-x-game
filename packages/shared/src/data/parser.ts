@@ -79,8 +79,6 @@ export function parseBoardData(stationsText: string, connectionsText: string): B
   const stations = parseStations(stationsText);
   const connections = parseConnections(connectionsText);
 
-  console.log(`Parsed ${stations.length} stations and ${connections.length} connections`);
-
   return {
     stations,
     connections,

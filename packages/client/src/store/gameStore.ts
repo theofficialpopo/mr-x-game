@@ -63,48 +63,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * Initialize WebSocket event listeners
    */
   initializeWebSocket: () => {
-    console.log('🔧 initializeWebSocket called, checking socket connection...');
-
     // Ensure socket is connected
     if (!socketService.isConnected()) {
-      console.log('🔌 Socket not connected, connecting now...');
       socketService.connect();
     }
 
     // Wait for socket to be ready before registering listeners
     const setupListeners = () => {
-      console.log('🎧 Setting up game event listeners...');
-
       // Listen for game state updates from server
       socketService.onGameState((state: ClientGameState) => {
-        console.log('📡 Received game state update:', state);
         get().updateGameState(state);
       });
 
       // Listen for move notifications
       socketService.onMoveMade((move) => {
-        console.log('🎯 Move made:', move);
+        // Move notifications handled silently
       });
 
       // Listen for game end
       socketService.onGameEnded((result) => {
-        console.log('🏁 Game ended:', result);
         set({ phase: 'finished', winner: result.winner });
       });
 
       // Listen for game errors
       socketService.onGameError((error) => {
-        console.error('❌ Game error:', error);
+        console.error('Game error:', error);
       });
-
-      console.log('✅ WebSocket event listeners initialized');
     };
 
     if (socketService.isConnected()) {
-      console.log('✅ Socket already connected, setting up listeners immediately');
       setupListeners();
     } else {
-      console.log('⏳ Waiting for socket to connect before setting up listeners...');
       // Wait a bit for connection to establish, then setup listeners
       setTimeout(setupListeners, 100);
     }
@@ -115,7 +104,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
    */
   cleanupWebSocket: () => {
     socketService.offGameEvents();
-    console.log('🧹 WebSocket event listeners cleaned up');
   },
 
   /**

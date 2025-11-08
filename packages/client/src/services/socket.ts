@@ -11,6 +11,7 @@ import type {
   MoveResponse,
   TransportType,
 } from '@shared';
+import { getPlayerUUID } from './session';
 
 /**
  * Socket.IO client for game communication
@@ -28,11 +29,8 @@ class SocketService {
    */
   connect(): void {
     if (this.socket?.connected) {
-      console.log('⚠️ Already connected to server');
       return;
     }
-
-    console.log(`🔌 Connecting to server at ${this.serverUrl}...`);
 
     this.socket = io(this.serverUrl, {
       transports: ['websocket', 'polling'],
@@ -41,16 +39,8 @@ class SocketService {
       reconnectionAttempts: 5,
     });
 
-    this.socket.on('connect', () => {
-      console.log('✅ Connected to server:', this.socket?.id);
-    });
-
-    this.socket.on('disconnect', (reason) => {
-      console.log('🔌 Disconnected from server:', reason);
-    });
-
     this.socket.on('connect_error', (error) => {
-      console.error('❌ Connection error:', error);
+      console.error('Connection error:', error);
     });
   }
 
@@ -61,7 +51,6 @@ class SocketService {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
-      console.log('🔌 Disconnected from server');
     }
   }
 
@@ -91,7 +80,8 @@ class SocketService {
         return;
       }
 
-      this.socket.emit('lobby:create', playerName, (response) => {
+      const playerUUID = getPlayerUUID();
+      this.socket.emit('lobby:create', playerName, playerUUID, (response) => {
         resolve(response);
       });
     });
@@ -107,7 +97,8 @@ class SocketService {
         return;
       }
 
-      this.socket.emit('lobby:join', gameId, playerName, (response) => {
+      const playerUUID = getPlayerUUID();
+      this.socket.emit('lobby:join', gameId, playerName, playerUUID, (response) => {
         resolve(response);
       });
     });
@@ -116,10 +107,17 @@ class SocketService {
   /**
    * Leave the current game
    */
-  leaveGame(): void {
-    if (this.socket) {
-      this.socket.emit('lobby:leave');
-    }
+  leaveGame(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.socket) {
+        resolve();
+        return;
+      }
+
+      this.socket.emit('lobby:leave', () => {
+        resolve();
+      });
+    });
   }
 
   /**
@@ -176,11 +174,7 @@ class SocketService {
    * Listen for game state updates
    */
   onGameState(callback: (state: ClientGameState) => void): void {
-    console.log('🔧 Registering game:state listener');
-    this.socket?.on('game:state', (state: ClientGameState) => {
-      console.log('📨 Socket received game:state event:', state);
-      callback(state);
-    });
+    this.socket?.on('game:state', callback);
   }
 
   /**
