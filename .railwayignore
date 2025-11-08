@@ -1,0 +1,23 @@
+# Development files
+node_modules
+.git
+.github
+
+# Client package (not needed for server deployment)
+packages/client
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+packages/client/e2e
+
+# Development configs
+.vscode
+.idea
+*.log
+.DS_Store
