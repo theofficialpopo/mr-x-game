@@ -28,9 +28,9 @@ function getSQL(): NeonQueryFunction<false, false> {
 }
 
 // Export sql wrapper that initializes on first use
-export const sql: NeonQueryFunction<false, false> = ((...args: any[]) => {
-  return getSQL()(...args);
-}) as any;
+export const sql = ((strings: TemplateStringsArray, ...values: any[]) => {
+  return getSQL()(strings, ...values);
+}) as unknown as NeonQueryFunction<false, false>;
 
 /**
  * Initialize database schema

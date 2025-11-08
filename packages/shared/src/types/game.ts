@@ -38,7 +38,9 @@ export interface Player {
  */
 export interface Move {
   playerId: string;
+  playerName: string;
   playerRole: PlayerRole;
+  role: PlayerRole; // Alias for playerRole for backward compatibility
   from: number;
   to: number;
   transport: TransportType;
@@ -70,6 +72,8 @@ export interface GameState {
   currentPlayerIndex: number;
   round: number; // Current round (1-24)
   moveHistory: Move[];
+  revealRounds: number[]; // Rounds when Mr. X position is revealed
+  winner: 'mr-x' | 'detectives' | null;
   result?: GameResult;
 }
 

@@ -338,6 +338,7 @@ export class GameRoom {
     const moveHistory = moves.map((m: any) => ({
       playerId: m.player_id,
       playerName: m.player_name,
+      playerRole: m.role,
       role: m.role,
       from: m.from_station,
       to: m.to_station,

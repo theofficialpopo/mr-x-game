@@ -109,12 +109,13 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
         let gameRoom = gameRooms.get(gameId);
         if (!gameRoom) {
           console.log(`🔍 Loading game ${gameId} from database...`);
-          gameRoom = await GameRoom.load(gameId, boardInstance);
-          if (!gameRoom) {
+          const loadedRoom = await GameRoom.load(gameId, boardInstance);
+          if (!loadedRoom) {
             console.log(`❌ Game ${gameId} not found`);
             callback({ success: false, error: 'Game not found' });
             return;
           }
+          gameRoom = loadedRoom;
           gameRooms.set(gameId, gameRoom);
         }
 
