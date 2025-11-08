@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto';
 import { sql } from '../config/database.js';
+import { PlayerManager } from './PlayerManager.js';
 import {
   Board,
   validateMove,
@@ -28,10 +29,12 @@ import type {
 export class GameRoom {
   private gameId: string;
   private board: Board;
+  private playerManager: PlayerManager;
 
   constructor(gameId: string, board: Board) {
     this.gameId = gameId;
     this.board = board;
+    this.playerManager = new PlayerManager(gameId);
   }
 
   /**
@@ -70,160 +73,25 @@ export class GameRoom {
    * Add player to lobby
    */
   async addPlayer(playerId: string, playerName: string, playerUUID?: string): Promise<boolean> {
-    // Get current game
-    const game = await sql`
-      SELECT * FROM games WHERE id = ${this.gameId}
-    `;
-
-    if (game.length === 0) {
-      return false;
-    }
-
-    // Check if player is reconnecting (by UUID or by name for legacy support)
-    let existingPlayer = null;
-
-    // First try to find by UUID
-    if (playerUUID) {
-      console.log(`[addPlayer] Checking for existing player with UUID ${playerUUID} in game ${this.gameId}`);
-      const byUUID = await sql`
-        SELECT * FROM players WHERE player_uuid = ${playerUUID} AND game_id = ${this.gameId}
-      `;
-      console.log(`[addPlayer] Found ${byUUID.length} players by UUID`);
-      if (byUUID.length > 0) {
-        existingPlayer = byUUID[0];
-        console.log(`[addPlayer] Found existing player by UUID:`, existingPlayer.name);
-      }
-    }
-
-    // If not found by UUID, try by name (for backwards compatibility)
-    if (!existingPlayer) {
-      console.log(`[addPlayer] Checking for existing player with name ${playerName} in game ${this.gameId}`);
-      const byName = await sql`
-        SELECT * FROM players WHERE name = ${playerName} AND game_id = ${this.gameId}
-      `;
-      console.log(`[addPlayer] Found ${byName.length} players by name`);
-      if (byName.length > 0) {
-        existingPlayer = byName[0];
-        console.log(`[addPlayer] Found existing player by name:`, existingPlayer.name, 'UUID:', existingPlayer.player_uuid);
-      }
-    }
-
-    // If player exists, update their socket ID and UUID
-    if (existingPlayer) {
-      console.log(`[addPlayer] Reconnecting player ${playerName}, updating socket ID from ${existingPlayer.id} to ${playerId}`);
-      await sql`
-        UPDATE players
-        SET id = ${playerId}, player_uuid = ${playerUUID || null}
-        WHERE name = ${playerName} AND game_id = ${this.gameId}
-      `;
-      console.log(`🔄 Player ${playerName} (UUID: ${playerUUID || 'legacy'}) reconnected to game ${this.gameId} (phase: ${game[0].phase})`);
-      return true;
-    }
-
-    console.log(`[addPlayer] No existing player found, checking if new player can join...`);
-
-    // Only allow new players during 'waiting' phase
-    if (game[0].phase !== 'waiting') {
-      return false;
-    }
-
-    // Check if player with same socket ID already exists
-    const existing = await sql`
-      SELECT * FROM players WHERE id = ${playerId} AND game_id = ${this.gameId}
-    `;
-
-    if (existing.length > 0) {
-      return true;
-    }
-
-    // Check if lobby is full
-    const playerCount = await sql`
-      SELECT COUNT(*) as count FROM players WHERE game_id = ${this.gameId}
-    `;
-
-    const count = Number(playerCount[0].count);
-
-    if (count >= 6) {
-      return false;
-    }
-
-    // Determine if this is the host (first player)
-    const isHost = count === 0;
-
-    // Add player (host is automatically ready)
-    await sql`
-      INSERT INTO players (id, player_uuid, game_id, name, position, is_host, is_ready, tickets, player_order)
-      VALUES (
-        ${playerId},
-        ${playerUUID || null},
-        ${this.gameId},
-        ${playerName},
-        0,
-        ${isHost},
-        ${isHost},
-        '{}'::jsonb,
-        ${count}
-      )
-    `;
-
-    console.log(`👤 Player ${playerName} (UUID: ${playerUUID || 'none'}) joined game ${this.gameId}`);
-    return true;
+    return this.playerManager.addPlayer(playerId, playerName, playerUUID);
   }
 
   /**
    * Remove player from lobby
    */
   async removePlayer(playerId: string): Promise<boolean> {
-    const player = await sql`
-      SELECT * FROM players WHERE id = ${playerId} AND game_id = ${this.gameId}
-    `;
-
-    if (player.length === 0) {
-      return false;
-    }
-
-    // Delete player
-    await sql`
-      DELETE FROM players WHERE id = ${playerId}
-    `;
-
-    // Check if any players remain
-    const remainingPlayers = await sql`
-      SELECT * FROM players WHERE game_id = ${this.gameId}
-      ORDER BY player_order
-    `;
-
-    if (remainingPlayers.length === 0) {
-      // Delete game if no players left
+    const gameDestroyed = await this.playerManager.removePlayer(playerId);
+    if (gameDestroyed) {
       await this.destroy();
-      console.log(`🗑️ Destroyed game ${this.gameId} - all players left`);
-      return true; // Game was destroyed
-    } else if (player[0].is_host) {
-      // Assign new host if host left (and set them as ready)
-      await sql`
-        UPDATE players
-        SET is_host = true, is_ready = true
-        WHERE game_id = ${this.gameId} AND player_order = (
-          SELECT MIN(player_order) FROM players WHERE game_id = ${this.gameId}
-        )
-      `;
     }
-
-    return false; // Game still has players
+    return gameDestroyed;
   }
 
   /**
    * Set player ready status
    */
   async setPlayerReady(playerId: string, isReady: boolean): Promise<boolean> {
-    const result = await sql`
-      UPDATE players
-      SET is_ready = ${isReady}
-      WHERE id = ${playerId} AND game_id = ${this.gameId}
-      RETURNING *
-    `;
-
-    return result.length > 0;
+    return this.playerManager.setPlayerReady(playerId, isReady);
   }
 
   /**
@@ -231,30 +99,18 @@ export class GameRoom {
    */
   async startGame(hostId: string): Promise<boolean> {
     // Verify host
-    const host = await sql`
-      SELECT * FROM players
-      WHERE id = ${hostId} AND game_id = ${this.gameId} AND is_host = true
-    `;
-
-    if (host.length === 0) {
+    const hostPlayerId = await this.playerManager.getHostId();
+    if (hostPlayerId !== hostId) {
       return false;
     }
 
     // Check all players are ready
-    const players = await sql`
-      SELECT * FROM players
-      WHERE game_id = ${this.gameId}
-      ORDER BY player_order
-    `;
-
-    if (players.length < 2) {
-      return false;
-    }
-
-    const allReady = players.every((p: any) => p.is_ready || p.is_host);
+    const allReady = await this.playerManager.areAllPlayersReady();
     if (!allReady) {
       return false;
     }
+
+    const players = await this.playerManager.getAllPlayers();
 
     // Assign roles randomly
     const mrXIndex = Math.floor(Math.random() * players.length);
@@ -431,14 +287,8 @@ export class GameRoom {
       return null;
     }
 
-    const players = await sql`
-      SELECT id, name, is_ready, is_host
-      FROM players
-      WHERE game_id = ${this.gameId}
-      ORDER BY player_order
-    `;
-
-    const host = players.find((p: any) => p.is_host);
+    const players = await this.playerManager.getAllPlayers();
+    const hostId = await this.playerManager.getHostId();
 
     const lobbyPlayers: LobbyPlayer[] = players.map((p: any) => ({
       id: p.id,
@@ -450,7 +300,7 @@ export class GameRoom {
     return {
       gameId: this.gameId,
       players: lobbyPlayers,
-      hostId: host?.id || '',
+      hostId: hostId || '',
       phase: 'waiting' as const,
       maxPlayers: 6,
     };
@@ -468,11 +318,7 @@ export class GameRoom {
       return null;
     }
 
-    const players = await sql`
-      SELECT * FROM players
-      WHERE game_id = ${this.gameId}
-      ORDER BY player_order
-    `;
+    const players = await this.playerManager.getAllPlayers();
 
     const moves = await sql`
       SELECT * FROM moves
@@ -572,9 +418,7 @@ export class GameRoom {
    */
   async resetForRematch(): Promise<void> {
     // Get existing players
-    const players = await sql`
-      SELECT * FROM players WHERE game_id = ${this.gameId} ORDER BY player_order
-    `;
+    const players = await this.playerManager.getAllPlayers();
 
     if (players.length < 2) {
       throw new Error('Not enough players for rematch');

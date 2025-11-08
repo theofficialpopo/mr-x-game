@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Station, Connection, TransportType } from '@shared/types/board';
 import type { Player } from '@shared/types/game';
+import { TRANSPORT_COLORS } from '@shared';
 
 interface SVGBoardProps {
   stations: Station[];
@@ -11,14 +12,6 @@ interface SVGBoardProps {
   isMrXRevealed?: boolean;
   currentPlayerId?: string;
 }
-
-// Transport colors matching game theme
-const TRANSPORT_COLORS = {
-  taxi: '#FFD700',      // Gold
-  bus: '#32CD32',       // Lime green
-  underground: '#FF1493', // Deep pink
-  water: '#00CED1',     // Dark turquoise
-};
 
 export function SVGBoard({
   stations,

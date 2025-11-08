@@ -1,20 +1,7 @@
 import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import type { Player } from '@shared/types/game';
-
-const TRANSPORT_COLORS = {
-  taxi: '#FFD700',
-  bus: '#32CD32',
-  underground: '#FF1493',
-  water: '#00CED1',
-};
-
-const TRANSPORT_ICONS = {
-  taxi: '🚕',
-  bus: '🚌',
-  underground: '🚇',
-  water: '⛴️',
-};
+import { TRANSPORT_COLORS, TRANSPORT_ICONS } from '@shared';
 
 export function PlayerPanel() {
   const { players, currentPlayerIndex } = useGameStore();

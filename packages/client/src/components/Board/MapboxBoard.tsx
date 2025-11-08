@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { Station, Connection } from '@shared/types/board';
 import type { Player } from '@shared/types/game';
+import { TRANSPORT_COLORS } from '@shared';
 
 interface MapboxBoardProps {
   stations: Station[];
@@ -12,14 +13,6 @@ interface MapboxBoardProps {
   players?: Player[];
   isMrXRevealed?: boolean;
 }
-
-// Transport colors matching game theme
-const TRANSPORT_COLORS = {
-  taxi: '#FFD700',      // Gold
-  bus: '#32CD32',       // Lime green
-  underground: '#FF1493', // Deep pink
-  water: '#00CED1',     // Dark turquoise
-};
 
 export function MapboxBoard({
   stations,

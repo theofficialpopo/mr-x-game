@@ -1,9 +1,4 @@
-const TRANSPORT_INFO = {
-  taxi: { icon: '🚕', color: '#FFD700', name: 'Taxi' },
-  bus: { icon: '🚌', color: '#32CD32', name: 'Bus' },
-  underground: { icon: '🚇', color: '#FF1493', name: 'Underground' },
-  water: { icon: '⛴️', color: '#00CED1', name: 'Water' },
-} as const;
+import { TRANSPORT_INFO } from '@shared';
 
 interface TransportLegendProps {
   visible: boolean;

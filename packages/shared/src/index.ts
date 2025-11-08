@@ -30,6 +30,14 @@ export {
   STARTING_POSITIONS
 } from './types/game';
 
+// Transport constants
+export {
+  TRANSPORT_COLORS,
+  TRANSPORT_ICONS,
+  TRANSPORT_NAMES,
+  TRANSPORT_INFO
+} from './constants/transport';
+
 // Data parsing
 export { parseStations, parseConnections, parseBoardData, validateBoardData } from './data/parser';
 

@@ -1,4 +1,4 @@
-import type { Player, GamePhase, GameState } from './game';
+import type { Player, GamePhase } from './game';
 import type { TransportType } from './board';
 
 /**

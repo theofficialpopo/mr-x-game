@@ -1,34 +1,12 @@
 import type { TransportType } from '@shared/types/board';
 import { useGameStore } from '../../store/gameStore';
+import { TRANSPORT_INFO } from '@shared';
 
 interface TransportModalProps {
   stationId: number;
   availableTransports: TransportType[];
   onClose: () => void;
 }
-
-const TRANSPORT_INFO = {
-  taxi: {
-    icon: '🚕',
-    color: '#FFD700',
-    name: 'Taxi',
-  },
-  bus: {
-    icon: '🚌',
-    color: '#32CD32',
-    name: 'Bus',
-  },
-  underground: {
-    icon: '🚇',
-    color: '#FF1493',
-    name: 'Underground',
-  },
-  water: {
-    icon: '⛴️',
-    color: '#00CED1',
-    name: 'Water',
-  },
-};
 
 export function TransportModal({ stationId, availableTransports, onClose }: TransportModalProps) {
   const makeMove = useGameStore((state) => state.makeMove);
