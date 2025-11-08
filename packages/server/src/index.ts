@@ -1,49 +1,65 @@
 import express from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { initializeSocketIO } from './socket/server.js';
+import { initializeDatabase } from './config/database.js';
 
 // Load environment variables
 dotenv.config({ path: '../../.env' });
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST']
-  }
-});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
-});
-
-// Socket.IO connection handler
-io.on('connection', (socket) => {
-  console.log(`Client connected: ${socket.id}`);
-
-  socket.on('disconnect', () => {
-    console.log(`Client disconnected: ${socket.id}`);
-  });
-
-  // Test event
-  socket.on('ping', () => {
-    socket.emit('pong', { message: 'Server is responsive' });
-  });
 });
 
 const PORT = process.env.PORT || 3001;
 
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`🎮 Ready for Scotland Yard game development!`);
+// Initialize server
+async function startServer() {
+  try {
+    // Initialize database schema
+    await initializeDatabase();
+
+    // Initialize Socket.IO with game logic
+    const io = initializeSocketIO(httpServer);
+
+    httpServer.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`🎮 Socket.IO game server ready`);
+      console.log(`💾 Neon database connected`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('\n🛑 Shutting down server...');
+
+  // Close HTTP server
+  httpServer.close(() => {
+    console.log('✅ HTTP server closed');
+    process.exit(0);
+  });
 });
 
-export { app, io };
+process.on('SIGTERM', async () => {
+  console.log('\n🛑 Shutting down server...');
+  httpServer.close(() => {
+    process.exit(0);
+  });
+});
+
+export { app };

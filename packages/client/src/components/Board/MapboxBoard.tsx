@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { Station, Connection } from '@shared/types/board';
+import type { Player } from '@shared/types/game';
 
 interface MapboxBoardProps {
   stations: Station[];
   connections: Connection[];
   onStationClick?: (stationId: number) => void;
   highlightedStations?: number[];
+  players?: Player[];
+  isMrXRevealed?: boolean;
 }
 
 // Transport colors matching game theme
@@ -23,18 +26,32 @@ export function MapboxBoard({
   connections,
   onStationClick,
   highlightedStations = [],
+  players = [],
+  isMrXRevealed = false,
 }: MapboxBoardProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const playerMarkers = useRef<Map<string, mapboxgl.Marker>>(new Map());
 
   // Initialize map
   useEffect(() => {
-    if (map.current) return; // Already initialized
-    if (!mapContainer.current) return;
+    console.log('🗺️ MapboxBoard useEffect triggered');
+
+    if (map.current) {
+      console.log('⏭️ Map already initialized, skipping');
+      return;
+    }
+
+    if (!mapContainer.current) {
+      console.log('⚠️ Map container not ready yet');
+      return;
+    }
 
     // Check for Mapbox token
     const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+    console.log('🔑 Mapbox token check:', token ? `Found (${token.substring(0, 20)}...)` : 'NOT FOUND');
+
     if (!token) {
       console.error('❌ Mapbox token not found!');
       console.error('💡 Make sure VITE_MAPBOX_ACCESS_TOKEN is set in .env');
@@ -43,6 +60,7 @@ export function MapboxBoard({
     }
 
     mapboxgl.accessToken = token;
+    console.log('✅ Mapbox access token set');
 
     // Get center from first station with geo coordinates
     const centerStation = stations.find(s => s.geoCoordinates);
@@ -50,32 +68,57 @@ export function MapboxBoard({
       ? [centerStation.geoCoordinates.lng, centerStation.geoCoordinates.lat]
       : [-0.1278, 51.5074]; // London center fallback
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11', // Dark theme
-      center,
-      zoom: 12,
-      pitch: 0,
-      bearing: 0,
-      antialias: true,
-    });
+    console.log('📍 Map center:', center, 'from station:', centerStation?.id || 'fallback');
 
-    // Add navigation controls
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    try {
+      console.log('🏗️ Creating Mapbox map instance...');
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12', // Light streets theme
+        center,
+        zoom: 12,
+        pitch: 0,
+        bearing: 0,
+        antialias: true,
+      });
+      console.log('✅ Map instance created successfully');
 
-    map.current.on('load', () => {
-      setMapLoaded(true);
-      addLayers();
-    });
+      // Add navigation controls
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      console.log('✅ Navigation controls added');
+
+      // Add error handler
+      map.current.on('error', (e) => {
+        console.error('❌ Mapbox error:', e);
+      });
+
+      map.current.on('load', () => {
+        console.log('🎉 Map loaded successfully!');
+        setMapLoaded(true);
+        addLayers();
+      });
+
+      console.log('👂 Map load event listener attached');
+    } catch (error) {
+      console.error('❌ Error creating map:', error);
+    }
 
     return () => {
-      map.current?.remove();
+      console.log('🧹 Cleaning up map instance');
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
     };
   }, []);
 
   // Add map layers
   const addLayers = () => {
-    if (!map.current) return;
+    console.log('🎨 addLayers called');
+    if (!map.current) {
+      console.error('❌ Map instance not available in addLayers');
+      return;
+    }
 
     // Convert stations to GeoJSON
     const stationsGeoJSON: GeoJSON.FeatureCollection = {
@@ -100,32 +143,34 @@ export function MapboxBoard({
     };
 
     // Convert connections to GeoJSON LineStrings
+    const connectionFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
+
+    connections.forEach(conn => {
+      const from = stations.find(s => s.id === conn.from);
+      const to = stations.find(s => s.id === conn.to);
+
+      if (!from?.geoCoordinates || !to?.geoCoordinates) return;
+
+      connectionFeatures.push({
+        type: 'Feature' as const,
+        geometry: {
+          type: 'LineString' as const,
+          coordinates: [
+            [from.geoCoordinates.lng, from.geoCoordinates.lat],
+            [to.geoCoordinates.lng, to.geoCoordinates.lat],
+          ],
+        },
+        properties: {
+          type: conn.type,
+          from: conn.from,
+          to: conn.to,
+        },
+      });
+    });
+
     const connectionsGeoJSON: GeoJSON.FeatureCollection = {
       type: 'FeatureCollection',
-      features: connections
-        .map(conn => {
-          const from = stations.find(s => s.id === conn.from);
-          const to = stations.find(s => s.id === conn.to);
-
-          if (!from?.geoCoordinates || !to?.geoCoordinates) return null;
-
-          return {
-            type: 'Feature' as const,
-            geometry: {
-              type: 'LineString' as const,
-              coordinates: [
-                [from.geoCoordinates.lng, from.geoCoordinates.lat],
-                [to.geoCoordinates.lng, to.geoCoordinates.lat],
-              ],
-            },
-            properties: {
-              type: conn.type,
-              from: conn.from,
-              to: conn.to,
-            },
-          };
-        })
-        .filter((f): f is GeoJSON.Feature => f !== null),
+      features: connectionFeatures,
     };
 
     // Add connection lines source
@@ -259,25 +304,62 @@ export function MapboxBoard({
     });
   }, [highlightedStations, mapLoaded, stations]);
 
+  // Update player markers
+  useEffect(() => {
+    if (!mapLoaded || !map.current) return;
+
+    // Remove all existing markers
+    playerMarkers.current.forEach(marker => marker.remove());
+    playerMarkers.current.clear();
+
+    // Add markers for each player
+    players.forEach((player: Player) => {
+      const station = stations.find(s => s.id === player.position);
+      if (!station?.geoCoordinates) return;
+
+      // Hide Mr. X marker if not revealed
+      if (player.role === 'mr-x' && !isMrXRevealed) {
+        return;
+      }
+
+      // Create marker element
+      const el = document.createElement('div');
+      el.className = 'player-marker';
+      el.style.width = '40px';
+      el.style.height = '40px';
+      el.style.borderRadius = '50%';
+      el.style.border = player.role === 'mr-x' ? '3px solid #FF1493' : '3px solid #00CED1';
+      el.style.backgroundColor = player.role === 'mr-x' ? '#FF1493' : '#00CED1';
+      el.style.display = 'flex';
+      el.style.alignItems = 'center';
+      el.style.justifyContent = 'center';
+      el.style.fontSize = '20px';
+      el.style.pointerEvents = 'none'; // Allow clicks to pass through to stations
+      el.style.boxShadow = player.role === 'mr-x'
+        ? '0 0 20px rgba(255, 20, 147, 0.6)'
+        : '0 0 20px rgba(0, 206, 209, 0.6)';
+      el.style.transition = 'all 0.3s ease';
+      el.innerHTML = player.role === 'mr-x' ? '❓' : '🔍';
+      el.title = player.name;
+
+      // Create and add marker
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([station.geoCoordinates.lng, station.geoCoordinates.lat])
+        .addTo(map.current!);
+
+      playerMarkers.current.set(player.id, marker);
+    });
+
+    return () => {
+      // Cleanup markers on unmount
+      playerMarkers.current.forEach(marker => marker.remove());
+      playerMarkers.current.clear();
+    };
+  }, [players, isMrXRevealed, mapLoaded, stations]);
+
   return (
     <div className="relative w-full h-full">
-      <div ref={mapContainer} className="absolute inset-0" />
-
-      {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-black bg-opacity-80 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
-        <h3 className="font-bold text-white mb-2 text-sm">Transport Types</h3>
-        <div className="space-y-1">
-          {Object.entries(TRANSPORT_COLORS).map(([type, color]) => (
-            <div key={type} className="flex items-center gap-2">
-              <div
-                className="w-8 h-0.5"
-                style={{ backgroundColor: color }}
-              />
-              <span className="text-white text-xs capitalize">{type}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <div ref={mapContainer} className="absolute inset-0 z-0" />
 
       {/* Loading indicator */}
       {!mapLoaded && (

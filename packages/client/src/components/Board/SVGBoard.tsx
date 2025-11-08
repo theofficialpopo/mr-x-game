@@ -1,11 +1,15 @@
 import { useMemo } from 'react';
-import type { Station, Connection } from '@shared/types/board';
+import type { Station, Connection, TransportType } from '@shared/types/board';
+import type { Player } from '@shared/types/game';
 
 interface SVGBoardProps {
   stations: Station[];
   connections: Connection[];
   onStationClick?: (stationId: number) => void;
   highlightedStations?: number[];
+  players?: Player[];
+  isMrXRevealed?: boolean;
+  currentPlayerId?: string;
 }
 
 // Transport colors matching game theme
@@ -21,6 +25,9 @@ export function SVGBoard({
   connections,
   onStationClick,
   highlightedStations = [],
+  players = [],
+  isMrXRevealed = false,
+  currentPlayerId,
 }: SVGBoardProps) {
   // Calculate viewBox from station positions
   const viewBox = useMemo(() => {
@@ -63,7 +70,7 @@ export function SVGBoard({
 
         {/* Connection lines */}
         <g className="connections">
-          {connections.map((conn, idx) => {
+          {connections.map((conn: Connection, idx: number) => {
             const from = stationMap.get(conn.from);
             const to = stationMap.get(conn.to);
 
@@ -76,7 +83,7 @@ export function SVGBoard({
                 y1={from.position.y}
                 x2={to.position.x}
                 y2={to.position.y}
-                stroke={TRANSPORT_COLORS[conn.type]}
+                stroke={TRANSPORT_COLORS[conn.type as TransportType]}
                 strokeWidth="2"
                 opacity="0.6"
                 className="transition-opacity hover:opacity-100"
@@ -153,31 +160,6 @@ export function SVGBoard({
           })}
         </g>
 
-        {/* Legend */}
-        <g className="legend" transform={`translate(${Number(viewBox.split(' ')[0]) + 20}, ${Number(viewBox.split(' ')[1]) + 20})`}>
-          <rect width="180" height="140" fill="#000000" opacity="0.8" rx="5" />
-
-          <text x="10" y="20" fill="#FFFFFF" fontSize="14" fontWeight="bold">
-            Transport Types
-          </text>
-
-          {Object.entries(TRANSPORT_COLORS).map(([type, color], idx) => (
-            <g key={type} transform={`translate(10, ${40 + idx * 25})`}>
-              <line
-                x1="0"
-                y1="0"
-                x2="30"
-                y2="0"
-                stroke={color}
-                strokeWidth="3"
-              />
-              <text x="40" y="5" fill="#FFFFFF" fontSize="12" className="capitalize">
-                {type}
-              </text>
-            </g>
-          ))}
-        </g>
-
         {/* Stats */}
         <g className="stats" transform={`translate(${Number(viewBox.split(' ')[0]) + 20}, ${Number(viewBox.split(' ')[1]) + 180})`}>
           <rect width="180" height="70" fill="#000000" opacity="0.8" rx="5" />
@@ -191,6 +173,103 @@ export function SVGBoard({
           <text x="10" y="58" fill="#FFFFFF" fontSize="12">
             Connections: {connections.length}
           </text>
+        </g>
+
+        {/* Player markers */}
+        <g className="player-markers">
+          {players.map((player: Player) => {
+            const station = stations.find(s => s.id === player.position);
+            if (!station) return null;
+
+            const isMrX = player.role === 'mr-x';
+            const isCurrentPlayer = player.id === currentPlayerId;
+            const markerColor = isMrX ? '#FF1493' : '#00CED1';
+            const markerSize = 20;
+
+            // Adjust opacity and glow based on whether this is the current player
+            const outerGlowOpacity = isCurrentPlayer ? 0.4 : 0.08;
+            const middleGlowOpacity = isCurrentPlayer ? 0.5 : 0.15;
+            const markerOpacity = isCurrentPlayer ? 1 : 0.6;
+
+            return (
+              <g key={player.id} className="pointer-events-none">
+                {/* Extra outer glow for current player */}
+                {isCurrentPlayer && (
+                  <circle
+                    cx={station.position.x}
+                    cy={station.position.y}
+                    r={markerSize + 14}
+                    fill={markerColor}
+                    opacity="0.2"
+                    className="animate-pulse"
+                  />
+                )}
+
+                {/* Outer glow ring */}
+                <circle
+                  cx={station.position.x}
+                  cy={station.position.y}
+                  r={markerSize + 8}
+                  fill={markerColor}
+                  opacity={outerGlowOpacity}
+                  className={isCurrentPlayer ? "animate-pulse" : ""}
+                />
+
+                {/* Middle glow ring */}
+                <circle
+                  cx={station.position.x}
+                  cy={station.position.y}
+                  r={markerSize + 4}
+                  fill={markerColor}
+                  opacity={middleGlowOpacity}
+                />
+
+                {/* Main marker background */}
+                <circle
+                  cx={station.position.x}
+                  cy={station.position.y}
+                  r={markerSize}
+                  fill={markerColor}
+                  opacity={markerOpacity}
+                >
+                  <title>{player.name}</title>
+                </circle>
+
+                {/* White inner circle */}
+                <circle
+                  cx={station.position.x}
+                  cy={station.position.y}
+                  r={markerSize - 3}
+                  fill="#FFFFFF"
+                  opacity={markerOpacity}
+                />
+
+                {/* Icon circle background */}
+                <circle
+                  cx={station.position.x}
+                  cy={station.position.y}
+                  r={markerSize - 6}
+                  fill={markerColor}
+                  opacity={markerOpacity}
+                />
+
+                {/* Player icon */}
+                <text
+                  x={station.position.x}
+                  y={station.position.y}
+                  fill="#FFFFFF"
+                  fontSize="18"
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  opacity={markerOpacity}
+                  className="select-none"
+                >
+                  {isMrX ? '?' : 'D'}
+                </text>
+              </g>
+            );
+          })}
         </g>
       </svg>
     </div>

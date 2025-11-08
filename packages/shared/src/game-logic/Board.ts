@@ -51,6 +51,13 @@ export class Board {
   }
 
   /**
+   * Check if station exists
+   */
+  hasStation(stationId: number): boolean {
+    return this.stations.has(stationId);
+  }
+
+  /**
    * Get all stations
    */
   getAllStations(): Station[] {
