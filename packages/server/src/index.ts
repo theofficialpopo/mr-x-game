@@ -2,8 +2,13 @@ import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initializeSocketIO } from './socket/server.js';
 import { initializeDatabase } from './config/database.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config({ path: '../../.env' });
@@ -19,6 +24,18 @@ app.use(express.json());
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
 });
+
+// Serve client static files in production
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.join(__dirname, '../../client/dist');
+  console.log(`📦 Serving client from: ${clientBuildPath}`);
+  app.use(express.static(clientBuildPath));
+
+  // SPA catch-all route (must be after all API routes)
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
+}
 
 const PORT = process.env.PORT || 3001;
 

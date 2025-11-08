@@ -14,7 +14,7 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
 
   // Check if we should auto-reconnect
   const session = getSession();
-  const shouldAutoReconnect = initialGameId && hasActiveSessionForGame(initialGameId);
+  const shouldAutoReconnect = !!(initialGameId && hasActiveSessionForGame(initialGameId));
 
   const [mode, setMode] = useState<'menu' | 'create' | 'join' | 'waiting'>(
     shouldAutoReconnect ? 'waiting' : (initialGameId ? 'join' : 'menu')

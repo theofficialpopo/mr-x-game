@@ -3,9 +3,6 @@ node_modules
 .git
 .github
 
-# Client package (not needed for server deployment)
-packages/client
-
 # Documentation
 docs
 *.md
@@ -14,7 +11,6 @@ docs
 # Test files
 **/*.test.ts
 **/*.spec.ts
-packages/client/e2e
 
 # Development configs
 .vscode
