@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "pnpm build:server",
-    "build:server": "tsc",
-    "start": "node dist/server/src/index.js",
+    "build": "pnpm build:client",
+    "build:client": "cd ../client && pnpm install && pnpm build",
+    "start": "tsx src/index.ts",
     "test": "vitest",
     "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0",
     "db:generate": "prisma generate",
@@ -22,6 +22,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "socket.io": "^4.7.5",
+    "tsx": "^4.10.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -34,7 +35,6 @@
     "eslint": "^8.57.0",
     "prisma": "^5.14.0",
     "supertest": "^7.0.0",
-    "tsx": "^4.10.5",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
   }
