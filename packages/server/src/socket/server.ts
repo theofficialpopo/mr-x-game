@@ -169,7 +169,9 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
 
         console.log(`👤 ${playerName} joined game ${gameId}`);
       } catch (error) {
-        console.error('Error joining game:', error);
+        console.error(`❌ Error joining game ${gameId}:`, error);
+        console.error('Error details:', error instanceof Error ? error.message : String(error));
+        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
         callback({ success: false, error: 'Internal server error' });
       }
     });

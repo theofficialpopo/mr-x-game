@@ -61,9 +61,11 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
         const hasSession = session.gameId === initialGameId && session.playerName !== null;
 
         if (!hasSession) {
-          // No valid session for this game - redirect to lobby
-          console.log(`[Reconnect] No valid session for game ${initialGameId}, redirecting to lobby`);
-          navigate('/');
+          // No session for this game - show join screen with game ID pre-filled
+          console.log(`[Reconnect] No session for game ${initialGameId}, showing join screen`);
+          setMode('join');
+          setGameId(initialGameId);
+          setIsConnecting(false);
           return;
         }
 
