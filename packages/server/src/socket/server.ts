@@ -27,10 +27,17 @@ let boardInstance: Board | null = null;
  * Initialize Socket.IO server
  */
 export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<ClientToServerEvents, ServerToClientEvents> {
+  // In production, client is served from same server, so allow same origin
+  // In development, allow localhost:3000
+  const allowedOrigins = process.env.NODE_ENV === 'production'
+    ? true // Allow same origin in production (client served from same server)
+    : (process.env.CLIENT_URL || 'http://localhost:3000');
+
   const io = new SocketIOServer<ClientToServerEvents, ServerToClientEvents>(httpServer, {
     cors: {
-      origin: process.env.CLIENT_URL || 'http://localhost:3000',
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
+      credentials: true,
     },
   });
 

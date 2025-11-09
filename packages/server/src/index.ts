@@ -17,7 +17,12 @@ const app = express();
 const httpServer = createServer(app);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'
+    ? true // Allow same origin in production
+    : (process.env.CLIENT_URL || 'http://localhost:3000'),
+  credentials: true,
+}));
 app.use(express.json());
 
 // Health check endpoint
