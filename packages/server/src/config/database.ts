@@ -21,11 +21,11 @@ function getSQL(): NeonQueryFunction<false, false> {
       process.exit(1);
     }
 
-    // Configure Neon client with increased timeout and connection pooling
+    // Configure Neon client with timeout and connection pooling
     _sql = neon(DATABASE_URL, {
       fetchOptions: {
-        // Increase timeout to 30 seconds for Railway environment
-        signal: AbortSignal.timeout(30000),
+        // 10 second timeout per attempt (combined with retries for resilience)
+        signal: AbortSignal.timeout(10000),
       },
       // Enable connection caching for better performance
       fetchConnectionCache: true,
@@ -38,8 +38,8 @@ function getSQL(): NeonQueryFunction<false, false> {
 // Helper function to retry async operations with exponential backoff
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelay: number = 1000
+  maxRetries: number = 5,
+  baseDelay: number = 500
 ): Promise<T> {
   let lastError: Error | null = null;
 
@@ -62,7 +62,7 @@ async function retryWithBackoff<T>(
 
 // Export sql wrapper with automatic retry logic for all queries
 export const sql = ((strings: TemplateStringsArray, ...values: any[]) => {
-  return retryWithBackoff(() => getSQL()(strings, ...values), 3, 1000);
+  return retryWithBackoff(() => getSQL()(strings, ...values), 5, 500);
 }) as unknown as NeonQueryFunction<false, false>;
 
 /**
