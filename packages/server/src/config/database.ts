@@ -29,6 +29,9 @@ function getSQL(): ReturnType<typeof postgres> {
       max_lifetime: 60 * 60, // Recycle connections after 1 hour
       connect_timeout: 10, // Connection timeout in seconds
 
+      // SSL configuration (required for Neon)
+      ssl: 'require',
+
       // Error handling
       onnotice: () => {}, // Suppress notices in production
 
