@@ -1,18 +1,16 @@
 import { randomBytes } from 'crypto';
 import { sql } from '../config/database.js';
 import { PlayerManager } from './PlayerManager.js';
+import { WinConditionChecker } from './WinConditionChecker.js';
+import { GameStateManager } from './GameStateManager.js';
 import { logger } from '../utils/logger.js';
 import type { DBGame, DBPlayer, DBMove } from '../types/database.js';
 import {
   Board,
   validateMove,
-  hasValidMoves,
-  isMrXCaptured,
-  areAllDetectivesStuck,
   DEFAULT_DETECTIVE_TICKETS,
   DEFAULT_MR_X_TICKETS,
   MR_X_REVEAL_ROUNDS,
-  MAX_ROUNDS,
   STARTING_POSITIONS,
 } from '../../../shared/src/index.js';
 import type {
@@ -26,17 +24,22 @@ import type {
 } from '../../../shared/src/index.js';
 
 /**
- * GameRoom manages a single game instance with Postgres persistence
+ * GameRoom orchestrates a single game instance
+ * Delegates to specialized managers for specific concerns
  */
 export class GameRoom {
   private gameId: string;
   private board: Board;
   private playerManager: PlayerManager;
+  private winChecker: WinConditionChecker;
+  private stateManager: GameStateManager;
 
   constructor(gameId: string, board: Board) {
     this.gameId = gameId;
     this.board = board;
     this.playerManager = new PlayerManager(gameId);
+    this.winChecker = new WinConditionChecker(board);
+    this.stateManager = new GameStateManager(gameId);
   }
 
   /**
@@ -136,12 +139,8 @@ export class GameRoom {
       `;
     }
 
-    // Update game to playing phase and reset reveal tracking
-    await sql`
-      UPDATE games
-      SET phase = 'playing', current_player_index = 0, mr_x_last_revealed_position = NULL
-      WHERE id = ${this.gameId}
-    `;
+    // Update game to playing phase
+    await this.stateManager.setPlayingPhase();
 
     logger.info(`🎮 Game ${this.gameId} started with ${players.length} players`);
     return true;
@@ -181,36 +180,7 @@ export class GameRoom {
     }
 
     // Apply move to database
-    const oldPosition = currentPlayer.position;
-    const newTickets = { ...currentPlayer.tickets };
-    newTickets[transport]--;
-
-    await sql`
-      UPDATE players
-      SET
-        position = ${stationId},
-        tickets = ${JSON.stringify(newTickets)}::jsonb
-      WHERE id = ${currentPlayer.id}
-    `;
-
-    // Record move in history
-    await sql`
-      INSERT INTO moves (
-        game_id, player_id, player_name, role,
-        from_station, to_station, transport, round, timestamp
-      )
-      VALUES (
-        ${this.gameId},
-        ${currentPlayer.id},
-        ${currentPlayer.name},
-        ${currentPlayer.role},
-        ${oldPosition},
-        ${stationId},
-        ${transport},
-        ${gameState.round},
-        ${Date.now()}
-      )
-    `;
+    await this.stateManager.applyMove(currentPlayer, stationId, transport, gameState.round);
 
     // Refresh game state after move
     const updatedGameState = await this.getGameState();
@@ -221,57 +191,19 @@ export class GameRoom {
     const mrX = updatedGameState.players.find(p => p.role === 'mr-x')!;
 
     // Check win conditions
-    let winner: 'mr-x' | 'detectives' | null = null;
-    if (isMrXCaptured(updatedGameState.players)) {
-      winner = 'detectives';
-    } else if (areAllDetectivesStuck(this.board, updatedGameState.players)) {
-      winner = 'mr-x';
-    } else if (!hasValidMoves(this.board, mrX, updatedGameState.players)) {
-      winner = 'detectives';
-    } else if (updatedGameState.round >= MAX_ROUNDS) {
-      winner = 'mr-x';
-    }
+    const winner = this.winChecker.checkWinner(updatedGameState.players, updatedGameState.round);
 
     // Update game phase if ended
     if (winner) {
-      await sql`
-        UPDATE games
-        SET phase = 'finished', winner = ${winner}
-        WHERE id = ${this.gameId}
-      `;
+      await this.stateManager.setWinner(winner);
     }
 
     // Advance to next player
-    const nextPlayerIndex = (gameState.currentPlayerIndex + 1) % updatedGameState.players.length;
-    const nextRound = nextPlayerIndex === 0 ? gameState.round + 1 : gameState.round;
-
-    // If we're advancing to a reveal round, store Mr. X's current position
-    let mrXLastRevealedPosition = null;
-    if (nextPlayerIndex === 0 && MR_X_REVEAL_ROUNDS.includes(nextRound)) {
-      mrXLastRevealedPosition = mrX.position;
-    }
-
-    if (mrXLastRevealedPosition !== null) {
-      await sql`
-        UPDATE games
-        SET
-          current_player_index = ${nextPlayerIndex},
-          round = ${nextRound},
-          mr_x_last_revealed_position = ${mrXLastRevealedPosition}
-        WHERE id = ${this.gameId}
-      `;
-    } else {
-      await sql`
-        UPDATE games
-        SET
-          current_player_index = ${nextPlayerIndex},
-          round = ${nextRound}
-        WHERE id = ${this.gameId}
-      `;
-    }
-
-    logger.info(
-      `🎯 Player ${currentPlayer.name} moved from ${oldPosition} to ${stationId} via ${transport}`
+    await this.stateManager.advanceTurn(
+      gameState.currentPlayerIndex,
+      updatedGameState.players.length,
+      gameState.round,
+      mrX.position
     );
 
     return { success: true };
