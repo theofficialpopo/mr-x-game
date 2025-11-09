@@ -82,10 +82,17 @@ export function GameBoard({
     // Check if this is a valid move
     const validMove = validMoves.find((m) => m.stationId === stationId);
 
+    console.log('[Click] Valid moves:', validMoves);
+    console.log('[Click] Looking for station:', stationId);
+    console.log('[Click] Found valid move:', validMove);
+
     if (validMove) {
       // Always show modal to select transport (even with single option)
+      console.log('[Click] Opening transport modal for station:', stationId, 'with transports:', validMove.transports);
       setSelectedStation(stationId);
       setAvailableTransports(validMove.transports);
+    } else {
+      console.log('[Click] Station', stationId, 'is not a valid move. Current position:', currentPlayer?.position);
     }
   };
 
