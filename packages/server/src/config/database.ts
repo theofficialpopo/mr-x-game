@@ -1,4 +1,4 @@
-import { neon, type NeonQueryFunction } from '@neondatabase/serverless';
+import postgres from 'postgres';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -6,11 +6,11 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// SQL client will be initialized lazily
-let _sql: NeonQueryFunction<false, false> | null = null;
+// SQL client with persistent connection pool
+let _sql: ReturnType<typeof postgres> | null = null;
 
-// Get or create SQL client
-function getSQL(): NeonQueryFunction<false, false> {
+// Get or create SQL client with persistent connection pool
+function getSQL(): ReturnType<typeof postgres> {
   if (!_sql) {
     const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -21,91 +21,56 @@ function getSQL(): NeonQueryFunction<false, false> {
       process.exit(1);
     }
 
-    // Configure Neon client with timeout and connection pooling
-    _sql = neon(DATABASE_URL, {
-      fetchOptions: {
-        // 10 second timeout per attempt (combined with retries for resilience)
-        signal: AbortSignal.timeout(10000),
-      },
-      // Enable connection caching for better performance
-      fetchConnectionCache: true,
+    // Create postgres client with connection pooling
+    // This maintains persistent connections for better performance
+    _sql = postgres(DATABASE_URL, {
+      max: 10, // Maximum number of connections in the pool
+      idle_timeout: 20, // Close idle connections after 20 seconds
+      connect_timeout: 10, // Connection timeout in seconds
     });
+
+    console.log('✅ PostgreSQL connection pool initialized');
   }
 
   return _sql;
 }
 
-// Helper function to retry async operations with exponential backoff
-async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 5,
-  baseDelay: number = 500
-): Promise<T> {
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error as Error;
-
-      if (attempt < maxRetries) {
-        const delay = baseDelay * Math.pow(2, attempt);
-        console.log(`⚠️  SQL query attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-
-  throw lastError;
-}
-
-// Export sql wrapper with automatic retry logic for all queries
-export const sql = ((strings: TemplateStringsArray, ...values: any[]) => {
-  return retryWithBackoff(() => getSQL()(strings, ...values), 5, 500);
-}) as unknown as NeonQueryFunction<false, false>;
+// Export sql client - uses persistent connection pool
+export const sql = getSQL();
 
 /**
  * Initialize database schema
  */
 export async function initializeDatabase(): Promise<void> {
   try {
-    // Test database connection first
+    // Test database connection
     console.log('🔌 Testing database connection...');
-    await retryWithBackoff(async () => {
-      await sql`SELECT 1 as health_check`;
-      console.log('✅ Database connection successful');
-    }, 4, 2000); // More retries for initial connection
+    await sql`SELECT 1 as health_check`;
+    console.log('✅ Database connection successful');
 
-    // Initialize schema with retry logic
-    await retryWithBackoff(async () => {
-      // Read schema file
-      const schemaPath = path.join(__dirname, '../db/schema.sql');
-      const schema = await fs.readFile(schemaPath, 'utf-8');
+    // Read schema file
+    const schemaPath = path.join(__dirname, '../db/schema.sql');
+    const schema = await fs.readFile(schemaPath, 'utf-8');
 
-      // Remove comments and split into individual statements
-      const cleanedSchema = schema
-        .split('\n')
-        .filter(line => !line.trim().startsWith('--'))
-        .join('\n');
+    // Remove comments and split into individual statements
+    const cleanedSchema = schema
+      .split('\n')
+      .filter(line => !line.trim().startsWith('--'))
+      .join('\n');
 
-      const statements = cleanedSchema
-        .split(';')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
+    const statements = cleanedSchema
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
 
-      console.log(`Executing ${statements.length} SQL statements...`);
+    console.log(`Executing ${statements.length} SQL statements...`);
 
-      // Execute each statement individually using tagged template syntax
-      for (let i = 0; i < statements.length; i++) {
-        const statement = statements[i];
-        // Manually construct a tagged template call for each statement
-        const templateStrings = Object.assign([statement], { raw: [statement] });
-        await sql(templateStrings as any);
-      }
+    // Execute each statement individually
+    for (const statement of statements) {
+      await sql.unsafe(statement);
+    }
 
-      console.log('✅ Database schema initialized');
-    }, 3, 2000);
+    console.log('✅ Database schema initialized');
 
     // Run migrations
     await runMigrations();
@@ -155,8 +120,7 @@ async function runMigrations(): Promise<void> {
         .filter(s => s.length > 0);
 
       for (const statement of statements) {
-        const templateStrings = Object.assign([statement], { raw: [statement] });
-        await sql(templateStrings as any);
+        await sql.unsafe(statement);
       }
 
       console.log(`✅ Applied migration: ${file}`);
