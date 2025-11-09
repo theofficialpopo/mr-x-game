@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { MR_X_REVEAL_ROUNDS } from '@shared/index';
 import { Button } from '../ui';
+import { socketService } from '../../services/socket';
 
 
 interface RoundTrackerProps {
@@ -19,16 +20,53 @@ export function RoundTracker({
   onToggleLegend,
   onLeaveGame,
 }: RoundTrackerProps) {
-  const { round } = useGameStore();
+  const { round, getCurrentPlayer, isDoubleMoveActive } = useGameStore();
+  const [isStartingDoubleMove, setIsStartingDoubleMove] = useState(false);
 
   // Show current round and next 4 rounds
   const visibleRounds = Array.from({ length: 5 }, (_, i) => round + i).filter((r) => r <= 24);
 
+  const currentPlayer = getCurrentPlayer();
+  const myPlayerId = socketService.getSocketId();
+  const isMyTurn = currentPlayer?.id === myPlayerId;
+  const isMrX = currentPlayer?.role === 'mr-x';
+  const hasDoubleMoveTickets = currentPlayer?.tickets.doubleMove && currentPlayer.tickets.doubleMove > 0;
+  const canUseDoubleMove = isMyTurn && isMrX && hasDoubleMoveTickets && !isDoubleMoveActive;
+
+  const handleStartDoubleMove = async () => {
+    setIsStartingDoubleMove(true);
+    try {
+      await socketService.startDoubleMove();
+    } catch (error) {
+      console.error('Failed to start double move:', error);
+    } finally {
+      setIsStartingDoubleMove(false);
+    }
+  };
+
   return (
     <div className="bg-black bg-opacity-60 backdrop-blur-sm border-b border-gray-800 py-3 px-6 relative z-30">
       <div className="flex items-center justify-between">
-        {/* Left side - empty for balance */}
-        <div className="w-12" />
+        {/* Left side - Double Move Button */}
+        <div className="w-48">
+          {canUseDoubleMove && (
+            <button
+              onClick={handleStartDoubleMove}
+              disabled={isStartingDoubleMove}
+              className="px-4 py-2 bg-pink-500 hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm transition-all shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50 flex items-center gap-2"
+              title="Use a double move card to move twice"
+            >
+              <span className="text-lg">🎯🎯</span>
+              <span>Double Move ({currentPlayer?.tickets.doubleMove})</span>
+            </button>
+          )}
+          {isDoubleMoveActive && isMyTurn && isMrX && (
+            <div className="px-4 py-2 bg-pink-500 bg-opacity-20 border border-pink-500 text-pink-400 rounded-lg font-semibold text-sm flex items-center gap-2">
+              <span className="text-lg animate-pulse">🎯</span>
+              <span>Move 1 of 2</span>
+            </div>
+          )}
+        </div>
 
         {/* Center - Round display */}
         <div className="flex items-center gap-2">

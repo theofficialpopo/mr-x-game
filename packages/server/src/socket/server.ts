@@ -389,6 +389,38 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
     });
 
     /**
+     * Start double move (Mr. X only)
+     */
+    socket.on('game:doubleMove:start', async (callback) => {
+      try {
+        const gameId = await getPlayerGameId(socket.id);
+        if (!gameId) {
+          callback({ success: false, error: 'Not in a game' });
+          return;
+        }
+
+        const gameRoom = gameRooms.get(gameId);
+        if (!gameRoom) {
+          callback({ success: false, error: 'Game not found' });
+          return;
+        }
+
+        // Start double move
+        const result = await gameRoom.startDoubleMove(socket.id);
+        callback(result);
+
+        if (!result.success) return;
+
+        // Broadcast updated game state to all players
+        await broadcastGameState(gameRoom, io, gameId);
+        logger.info(`🎯🎯 Double move started by ${socket.id} in game ${gameId}`);
+      } catch (error) {
+        logger.error('Error starting double move:', error);
+        callback({ success: false, error: 'Failed to start double move' });
+      }
+    });
+
+    /**
      * Rematch ready handler
      */
     socket.on('rematch:ready', async (isReady: boolean) => {

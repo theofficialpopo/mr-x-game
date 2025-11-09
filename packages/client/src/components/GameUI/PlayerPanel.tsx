@@ -113,6 +113,44 @@ export function PlayerPanel() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Black tickets (Mr. X only) */}
+                  {player.role === 'mr-x' && player.tickets.black > 0 && (
+                    <div
+                      className="flex items-center gap-2 p-2 rounded-lg border border-gray-700"
+                      style={{
+                        backgroundColor: `${TRANSPORT_COLORS['black']}10`,
+                      }}
+                    >
+                      <div
+                        className="w-7 h-7 rounded flex items-center justify-center text-base"
+                        style={{
+                          backgroundColor: `${TRANSPORT_COLORS['black']}30`,
+                        }}
+                      >
+                        {TRANSPORT_ICONS['black']}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xl font-bold text-white">
+                          {player.tickets.black}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Double move tickets (Mr. X only) */}
+                  {player.role === 'mr-x' && player.tickets.doubleMove > 0 && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg border border-pink-500 bg-pink-500 bg-opacity-10">
+                      <div className="w-7 h-7 rounded flex items-center justify-center text-base bg-pink-500 bg-opacity-30">
+                        🎯🎯
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xl font-bold text-white">
+                          {player.tickets.doubleMove}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

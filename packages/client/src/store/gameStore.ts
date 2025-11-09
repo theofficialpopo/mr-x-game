@@ -26,6 +26,7 @@ interface GameStore {
   round: number;
   revealRounds: number[];
   winner: 'mr-x' | 'detectives' | null;
+  isDoubleMoveActive: boolean;
 
   // WebSocket connection
   initializeWebSocket: () => void;
@@ -57,6 +58,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   round: 1,
   revealRounds: [...MR_X_REVEAL_ROUNDS],
   winner: null,
+  isDoubleMoveActive: false,
 
   setBoard: (board: Board) => set({ board }),
 
@@ -121,6 +123,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       round: state.round,
       revealRounds: state.revealRounds,
       winner: state.winner,
+      isDoubleMoveActive: state.isDoubleMoveActive || false,
     });
     logger.info('✅ Game state updated');
   },
@@ -137,6 +140,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       round: 1,
       revealRounds: [...MR_X_REVEAL_ROUNDS],
       winner: null,
+      isDoubleMoveActive: false,
     });
   },
 

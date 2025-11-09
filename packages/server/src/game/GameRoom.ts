@@ -147,6 +147,54 @@ export class GameRoom {
   }
 
   /**
+   * Start a double move (Mr. X only)
+   * Uses one doubleMove ticket and sets the game state to double move mode
+   */
+  async startDoubleMove(playerId: string): Promise<{ success: boolean; error?: string }> {
+    // Get game state
+    const gameState = await this.getGameState();
+    if (!gameState) {
+      return { success: false, error: 'Game not found' };
+    }
+
+    // Verify it's player's turn
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+    if (currentPlayer.id !== playerId) {
+      return { success: false, error: 'Not your turn' };
+    }
+
+    // Only Mr. X can use double move
+    if (currentPlayer.role !== 'mr-x') {
+      return { success: false, error: 'Only Mr. X can use double move' };
+    }
+
+    // Check if player has doubleMove ticket
+    if (currentPlayer.tickets.doubleMove <= 0) {
+      return { success: false, error: 'No double move cards remaining' };
+    }
+
+    // Use the doubleMove ticket
+    const newTickets = { ...currentPlayer.tickets };
+    newTickets.doubleMove--;
+
+    await sql`
+      UPDATE players
+      SET tickets = ${JSON.stringify(newTickets)}::jsonb
+      WHERE id = ${currentPlayer.id}
+    `;
+
+    // Set double move state
+    await sql`
+      UPDATE games
+      SET is_double_move_active = true
+      WHERE id = ${this.gameId}
+    `;
+
+    logger.info(`🎯🎯 ${currentPlayer.name} activated double move`);
+    return { success: true };
+  }
+
+  /**
    * Make a move (server-authoritative validation)
    */
   async makeMove(
@@ -182,6 +230,38 @@ export class GameRoom {
     // Apply move to database
     await this.stateManager.applyMove(currentPlayer, stationId, transport, gameState.round);
 
+    // Check if this is part of a double move
+    const isDoubleMoveActive = gameState.isDoubleMoveActive;
+    const isFirstMoveOfDouble = isDoubleMoveActive && !gameState.doubleMoveFirstMove;
+    const isSecondMoveOfDouble = isDoubleMoveActive && gameState.doubleMoveFirstMove;
+
+    if (isFirstMoveOfDouble) {
+      // This is the first move of a double move - store it and don't advance turn
+      await sql`
+        UPDATE games
+        SET double_move_first_move = ${JSON.stringify({
+          from: currentPlayer.position,
+          to: stationId,
+          transport
+        })}::jsonb
+        WHERE id = ${this.gameId}
+      `;
+      logger.info(`🎯 First move of double move completed - waiting for second move`);
+      return { success: true };
+    }
+
+    if (isSecondMoveOfDouble) {
+      // This is the second move of a double move - clear double move state
+      await sql`
+        UPDATE games
+        SET
+          is_double_move_active = false,
+          double_move_first_move = NULL
+        WHERE id = ${this.gameId}
+      `;
+      logger.info(`🎯🎯 Double move completed`);
+    }
+
     // Refresh game state after move
     const updatedGameState = await this.getGameState();
     if (!updatedGameState) {
@@ -198,13 +278,15 @@ export class GameRoom {
       await this.stateManager.setWinner(winner);
     }
 
-    // Advance to next player
-    await this.stateManager.advanceTurn(
-      gameState.currentPlayerIndex,
-      updatedGameState.players.length,
-      gameState.round,
-      mrX.position
-    );
+    // Advance to next player (unless this was the first move of a double move)
+    if (!isFirstMoveOfDouble) {
+      await this.stateManager.advanceTurn(
+        gameState.currentPlayerIndex,
+        updatedGameState.players.length,
+        gameState.round,
+        mrX.position
+      );
+    }
 
     return { success: true };
   }
@@ -289,6 +371,8 @@ export class GameRoom {
       moveHistory,
       revealRounds: [...MR_X_REVEAL_ROUNDS],
       winner: game[0].winner,
+      isDoubleMoveActive: game[0].is_double_move_active || false,
+      doubleMoveFirstMove: game[0].double_move_first_move || null,
     };
   }
 
@@ -350,6 +434,7 @@ export class GameRoom {
       revealRounds: gameState.revealRounds,
       isMrXRevealed,
       winner: gameState.winner,
+      isDoubleMoveActive: gameState.isDoubleMoveActive,
     };
   }
 
@@ -399,7 +484,9 @@ export class GameRoom {
         current_player_index = 0,
         round = 1,
         mr_x_last_revealed_position = NULL,
-        winner = NULL
+        winner = NULL,
+        is_double_move_active = false,
+        double_move_first_move = NULL
       WHERE id = ${this.gameId}
     `;
 

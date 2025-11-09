@@ -14,6 +14,7 @@ export interface ClientToServerEvents {
 
   // Game actions
   'game:move': (stationId: number, transport: TransportType, callback: (response: MoveResponse) => void) => void;
+  'game:doubleMove:start': (callback: (response: MoveResponse) => void) => void; // Mr. X only - initiate double move
   'game:surrender': () => void;
 
   // Rematch
@@ -70,6 +71,8 @@ export interface ClientGameState {
   revealRounds: number[];
   isMrXRevealed: boolean;
   winner: 'mr-x' | 'detectives' | null;
+  // Double move tracking
+  isDoubleMoveActive?: boolean; // True when Mr. X is in middle of double move
 }
 
 /**

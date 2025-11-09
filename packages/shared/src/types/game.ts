@@ -77,6 +77,13 @@ export interface GameState {
   revealRounds: number[]; // Rounds when Mr. X position is revealed
   winner: 'mr-x' | 'detectives' | null;
   result?: GameResult;
+  // Double move tracking (Mr. X only)
+  isDoubleMoveActive?: boolean; // True when Mr. X is using a double move
+  doubleMoveFirstMove?: {       // Details of the first move in a double move
+    from: number;
+    to: number;
+    transport: TransportType;
+  } | null;
 }
 
 /**

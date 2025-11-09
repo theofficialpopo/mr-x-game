@@ -180,6 +180,22 @@ class SocketService {
   }
 
   /**
+   * Start a double move (Mr. X only)
+   */
+  startDoubleMove(): Promise<MoveResponse> {
+    return new Promise((resolve) => {
+      if (!this.socket) {
+        resolve({ success: false, error: 'Not connected' });
+        return;
+      }
+
+      this.socket.emit('game:doubleMove:start', (response) => {
+        resolve(response);
+      });
+    });
+  }
+
+  /**
    * Listen for game state updates
    */
   onGameState(callback: (state: ClientGameState) => void): void {
