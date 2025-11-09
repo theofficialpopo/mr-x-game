@@ -333,7 +333,7 @@ export function MapboxBoard({
         ? '0 0 20px rgba(255, 20, 147, 0.6)'
         : '0 0 20px rgba(0, 206, 209, 0.6)';
       el.style.transition = 'all 0.3s ease';
-      el.innerHTML = player.role === 'mr-x' ? '❓' : '🔍';
+      el.textContent = player.role === 'mr-x' ? '❓' : '🔍';
       el.title = player.name;
 
       // Create and add marker

@@ -312,18 +312,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
         }
 
         // Send game state to all players
-        const sockets = await io.in(gameId).fetchSockets();
-        logger.info(`📤 Emitting game:state to ${sockets.length} sockets in room ${gameId}`);
-        for (const s of sockets) {
-          const clientState = await gameRoom.getClientGameState(s.id);
-          if (clientState) {
-            logger.info(`📤 Emitting game:state to socket ${s.id}:`, { phase: clientState.phase, gameId: clientState.gameId });
-            s.emit('game:state', clientState);
-          } else {
-            logger.info(`⚠️ No client state for socket ${s.id}`);
-          }
-        }
-
+        await broadcastGameState(gameRoom, io, gameId);
         logger.info(`🚀 Game ${gameId} started!`);
       } catch (error) {
         logger.error('Error starting game:', error);
@@ -376,13 +365,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
         io.to(gameId).emit('game:move:made', moveNotification);
 
         // Send updated game state to each player (with Mr. X filtering)
-        const sockets = await io.in(gameId).fetchSockets();
-        for (const s of sockets) {
-          const clientState = await gameRoom.getClientGameState(s.id);
-          if (clientState) {
-            s.emit('game:state', clientState);
-          }
-        }
+        await broadcastGameState(gameRoom, io, gameId);
 
         // Check if game ended
         if (gameState.phase === 'finished' && gameState.winner) {
@@ -440,18 +423,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
           await gameRoom.resetForRematch();
 
           // Send updated game state to all players
-          const sockets = await io.in(gameId).fetchSockets();
-          for (const s of sockets) {
-            const clientState = await gameRoom.getClientGameState(s.id);
-            if (clientState) {
-              logger.info(`📤 Emitting game:state to socket ${s.id}:`, {
-                phase: clientState.phase,
-                gameId: clientState.gameId,
-              });
-              s.emit('game:state', clientState);
-            }
-          }
-
+          await broadcastGameState(gameRoom, io, gameId);
           logger.info(`🚀 Rematch started for game ${gameId}!`);
         }
       } catch (error) {
@@ -472,6 +444,25 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
   });
 
   return io;
+}
+
+/**
+ * Broadcast game state to all players in a game room
+ * Each player receives their personalized view (Mr. X filtering, etc.)
+ */
+async function broadcastGameState(
+  gameRoom: GameRoom,
+  io: SocketIOServer<ClientToServerEvents, ServerToClientEvents>,
+  gameId: string
+): Promise<void> {
+  const sockets = await io.in(gameId).fetchSockets();
+
+  for (const socket of sockets) {
+    const clientState = await gameRoom.getClientGameState(socket.id);
+    if (clientState) {
+      socket.emit('game:state', clientState);
+    }
+  }
 }
 
 /**
