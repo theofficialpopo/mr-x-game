@@ -59,14 +59,23 @@ export function GameBoard({
   }, [currentPlayerIndex, phase, round, players.length]);
 
   const handleStationClick = (stationId: number) => {
-    if (phase !== 'playing') return;
+    if (phase !== 'playing') {
+      console.log('[Click] Game not in playing phase:', phase);
+      return;
+    }
 
     // Check if it's the local player's turn
     const currentPlayer = useGameStore.getState().getCurrentPlayer();
     const myPlayerId = socketService.getSocketId();
 
+    console.log('[Click] Station clicked:', stationId);
+    console.log('[Click] Current player:', currentPlayer?.name, currentPlayer?.id);
+    console.log('[Click] My player ID (socket ID):', myPlayerId);
+    console.log('[Click] All players:', players.map(p => ({ name: p.name, id: p.id, role: p.role })));
+
     if (!currentPlayer || currentPlayer.id !== myPlayerId) {
       // Not your turn - ignore the click
+      console.log('[Click] Not your turn - currentPlayer.id:', currentPlayer?.id, 'myPlayerId:', myPlayerId);
       return;
     }
 
