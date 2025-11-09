@@ -44,6 +44,9 @@ RUN pnpm install --frozen-lockfile --prod
 # Copy built client from builder stage
 COPY --from=builder /app/packages/client/dist ./packages/client/dist
 
+# Copy client public data files (needed by server for board data)
+COPY packages/client/public ./packages/client/public
+
 # Copy server source files (server uses tsx to run TypeScript directly)
 COPY packages/server/src ./packages/server/src
 
