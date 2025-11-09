@@ -47,7 +47,7 @@
     }));
     ```
   - **Impact:** Prevents unauthorized cross-origin API access
-  - **Reference:** SECURITY_AUDIT_REPORT.md (CVSS 8.1)
+  - **Reference:** docs/SECURITY_AUDIT_REPORT.md (CVSS 8.1)
 
 - [ ] **1.2 Add Security Headers (helmet)** (30 min)
   - **Issue:** Missing CSP, HSTS, X-Frame-Options headers
@@ -1005,10 +1005,10 @@ Update this section as you complete tasks!
 
 ## 🔗 Related Documentation
 
-- **PROJECT_STATUS.md** - Comprehensive project status
-- **ARCHITECTURE_REVIEW.md** - Architecture analysis (Grade: B+)
-- **CODE_QUALITY_REPORT.md** - Code quality details (Score: 7.5/10)
-- **SECURITY_AUDIT_REPORT.md** - Security vulnerabilities (Risk: HIGH)
+- **PROJECT_STATUS.md** - Comprehensive project status (in same folder)
+- **ARCHITECTURE_REVIEW.md** - Architecture analysis (Grade: B+, in same folder)
+- **CODE_QUALITY_REPORT.md** - Code quality details (Score: 7.5/10, in same folder)
+- **SECURITY_AUDIT_REPORT.md** - Security vulnerabilities (Risk: HIGH, in same folder)
 - **.github/issue-update.md** - GitHub issue tracker
 
 ---

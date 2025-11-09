@@ -21,10 +21,12 @@ packages/*/build
 # Documentation and reports
 *.md
 !README.md
-ARCHITECTURE_REVIEW.md
-CODE_QUALITY_REPORT.md
-PROJECT_PROGRESS_ANALYSIS.md
-SECURITY_AUDIT_REPORT.md
+docs/ARCHITECTURE_REVIEW.md
+docs/CODE_QUALITY_REPORT.md
+docs/PROJECT_PROGRESS_ANALYSIS.md
+docs/SECURITY_AUDIT_REPORT.md
+docs/ACTION_PLAN.md
+docs/PROJECT_STATUS.md
 
 # IDE
 .vscode
@@ -43,6 +45,6 @@ packages/*/coverage
 
 # Misc
 .railwayignore
-railway-deploy.md
+docs/railway-deploy.md
 Procfile
 nixpacks.toml

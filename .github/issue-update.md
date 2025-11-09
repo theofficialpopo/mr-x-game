@@ -328,7 +328,7 @@
 
 ## 📋 ACTION PLAN & NEXT STEPS
 
-**⚠️ IMPORTANT:** All findings from comprehensive analysis have been organized into **ACTION_PLAN.md**
+**⚠️ IMPORTANT:** All findings from comprehensive analysis have been organized into **docs/ACTION_PLAN.md**
 
 The action plan contains **6 major groups with 36 trackable tasks:**
 
@@ -372,7 +372,7 @@ The action plan contains **6 major groups with 36 trackable tasks:**
 
 ### 📖 Full Details
 
-See **ACTION_PLAN.md** for:
+See **docs/ACTION_PLAN.md** for:
 - Complete task breakdowns with code examples
 - Step-by-step implementation guides
 - Timeline recommendations (Week 1-5)
@@ -473,12 +473,12 @@ If you want to start right now, do these 3 tasks:
 **Documentation (8 files):**
 - `README.md` (252 lines)
 - `SETUP.md` (159 lines)
-- `ARCHITECTURE_REVIEW.md` (446 lines)
-- `CODE_QUALITY_REPORT.md` (492 lines)
-- `SECURITY_AUDIT_REPORT.md` (1009 lines)
-- `PROJECT_PROGRESS_ANALYSIS.md` (552 lines)
-- `PROJECT_STATUS.md` (comprehensive status doc)
-- `railway-deploy.md`
+- `docs/ARCHITECTURE_REVIEW.md` (446 lines)
+- `docs/CODE_QUALITY_REPORT.md` (492 lines)
+- `docs/SECURITY_AUDIT_REPORT.md` (1009 lines)
+- `docs/PROJECT_PROGRESS_ANALYSIS.md` (552 lines)
+- `docs/PROJECT_STATUS.md` (comprehensive status doc)
+- `docs/railway-deploy.md`
 
 ---
 
@@ -486,11 +486,11 @@ If you want to start right now, do these 3 tasks:
 
 **For detailed implementation guides, see:**
 
-- **ACTION_PLAN.md** ⭐ - Complete action plan with 36 trackable tasks
-- **PROJECT_STATUS.md** - Comprehensive project status and features
-- **ARCHITECTURE_REVIEW.md** - Architecture analysis (Grade: B+)
-- **CODE_QUALITY_REPORT.md** - Code quality details (Score: 7.5/10)
-- **SECURITY_AUDIT_REPORT.md** - Security vulnerabilities (Risk: HIGH)
+- **docs/ACTION_PLAN.md** ⭐ - Complete action plan with 36 trackable tasks
+- **docs/PROJECT_STATUS.md** - Comprehensive project status and features
+- **docs/ARCHITECTURE_REVIEW.md** - Architecture analysis (Grade: B+)
+- **docs/CODE_QUALITY_REPORT.md** - Code quality details (Score: 7.5/10)
+- **docs/SECURITY_AUDIT_REPORT.md** - Security vulnerabilities (Risk: HIGH)
 - **README.md** - Project overview and setup instructions
 - **SETUP.md** - Detailed setup guide
 
