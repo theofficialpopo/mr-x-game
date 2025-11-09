@@ -194,11 +194,14 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
   };
 
   const handleLeave = () => {
+    logger.info('[Lobby] Leaving game, clearing session');
     socketService.leaveGame();
+    clearSession(); // Clear the session to prevent auto-reconnect
     setMode('menu');
     setLobby(null);
     setGameId('');
     setError('');
+    navigate('/'); // Navigate back to home page
   };
 
   const handleBackToMenu = () => {
