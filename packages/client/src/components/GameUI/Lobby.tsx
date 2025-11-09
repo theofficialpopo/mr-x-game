@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { socketService } from '../../services/socket';
 import { setGameId as saveGameIdToSession, setPlayerName as savePlayerNameToSession, getSession, hasActiveSessionForGame, clearSession } from '../../services/session';
 import type { LobbyState } from '@shared';
+import { Button, Card, Input, Badge, Spinner, Avatar, Icons } from '../../design-system';
 
 interface LobbyProps {
   onGameStart: () => void;
@@ -194,48 +195,52 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
         <div className="max-w-md w-full space-y-6">
           <div className="text-center">
-            <h1 className="text-5xl font-bold mb-2" style={{ textShadow: '0 0 40px rgba(6, 182, 212, 0.5)' }}>
+            <h1 className="text-5xl font-bold mb-2 text-shadow-glow-cyan">
               Scotland Yard
             </h1>
             <p className="text-gray-400">A game of cat and mouse through London</p>
           </div>
 
-          <div className="bg-black bg-opacity-60 backdrop-blur-sm rounded-lg p-6 space-y-4 border border-gray-700">
+          <Card padding="lg" className="space-y-4">
             <h2 className="text-2xl font-semibold mb-4">Play Online</h2>
 
-            <input
+            <Input
               type="text"
               placeholder="Enter your name"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-800 bg-opacity-50 border border-gray-700 rounded-lg focus:outline-none focus:border-cyan-500 transition text-white placeholder-gray-400"
               maxLength={20}
+              size="lg"
             />
 
             {error && (
-              <div className="p-3 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg text-red-300 text-sm">
-                {error}
-              </div>
+              <Card variant="danger" padding="sm">
+                <p className="text-red-300 text-sm">{error}</p>
+              </Card>
             )}
 
-            <button
+            <Button
               onClick={() => setMode('create')}
               disabled={!playerName.trim()}
-              className="w-full px-6 py-3 bg-cyan-500 bg-opacity-20 border-2 border-cyan-500 text-cyan-400 rounded-lg font-semibold hover:bg-opacity-30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ boxShadow: playerName.trim() ? '0 0 20px rgba(6, 182, 212, 0.3)' : 'none' }}
+              variant="primary"
+              size="lg"
+              fullWidth
+              glow={!!playerName.trim()}
             >
               Create Game
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={() => setMode('join')}
               disabled={!playerName.trim()}
-              className="w-full px-6 py-3 bg-purple-500 bg-opacity-20 border-2 border-purple-500 text-purple-400 rounded-lg font-semibold hover:bg-opacity-30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ boxShadow: playerName.trim() ? '0 0 20px rgba(168, 85, 247, 0.3)' : 'none' }}
+              variant="secondary"
+              size="lg"
+              fullWidth
+              glow={!!playerName.trim()}
             >
               Join Game
-            </button>
-          </div>
+            </Button>
+          </Card>
         </div>
       </div>
     );
@@ -246,7 +251,7 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
         <div className="max-w-md w-full space-y-6">
-          <div className="bg-black bg-opacity-60 backdrop-blur-sm rounded-lg p-6 space-y-4 border border-gray-700">
+          <Card padding="lg" className="space-y-4">
             <h2 className="text-2xl font-semibold mb-4">Create Game</h2>
 
             <p className="text-gray-400">
@@ -254,29 +259,34 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
             </p>
 
             {error && (
-              <div className="p-3 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg text-red-300 text-sm">
-                {error}
-              </div>
+              <Card variant="danger" padding="sm">
+                <p className="text-red-300 text-sm">{error}</p>
+              </Card>
             )}
 
             <div className="flex gap-3">
-              <button
+              <Button
                 onClick={handleCreateGame}
                 disabled={isConnecting}
-                className="flex-1 px-6 py-3 bg-cyan-500 bg-opacity-20 border-2 border-cyan-500 text-cyan-400 rounded-lg font-semibold hover:bg-opacity-30 transition disabled:opacity-50"
-                style={{ boxShadow: isConnecting ? 'none' : '0 0 20px rgba(6, 182, 212, 0.3)' }}
+                variant="primary"
+                size="lg"
+                glow={!isConnecting}
+                className="flex-1"
+                loading={isConnecting}
               >
                 {isConnecting ? 'Creating...' : 'Create'}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setMode('menu')}
                 disabled={isConnecting}
-                className="flex-1 px-6 py-3 bg-gray-800 bg-opacity-50 border border-gray-700 text-gray-300 rounded-lg font-semibold hover:bg-gray-700 transition disabled:opacity-50"
+                variant="neutral"
+                size="lg"
+                className="flex-1"
               >
                 Back
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     );
@@ -287,46 +297,53 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
         <div className="max-w-md w-full space-y-6">
-          <div className="bg-black bg-opacity-60 backdrop-blur-sm rounded-lg p-6 space-y-4 border border-gray-700">
+          <Card padding="lg" className="space-y-4">
             <h2 className="text-2xl font-semibold mb-4">Join Game</h2>
 
-            <input
+            <Input
               type="text"
               placeholder="Enter Game ID"
               value={gameId}
               onChange={(e) => setGameId(e.target.value.toUpperCase())}
-              className="w-full px-4 py-3 bg-gray-800 bg-opacity-50 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500 transition uppercase font-mono text-center text-xl text-white placeholder-gray-400"
+              className="uppercase font-mono text-center text-xl"
               maxLength={6}
+              size="lg"
+              variant="primary"
             />
 
             {error && (
-              <div className="p-3 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg text-red-300 text-sm">
-                {error}
-              </div>
+              <Card variant="danger" padding="sm">
+                <p className="text-red-300 text-sm">{error}</p>
+              </Card>
             )}
 
             <div className="flex gap-3">
-              <button
+              <Button
                 onClick={handleJoinGame}
                 disabled={isConnecting || !gameId.trim()}
-                className="flex-1 px-6 py-3 bg-purple-500 bg-opacity-20 border-2 border-purple-500 text-purple-400 rounded-lg font-semibold hover:bg-opacity-30 transition disabled:opacity-50"
-                style={{ boxShadow: isConnecting || !gameId.trim() ? 'none' : '0 0 20px rgba(168, 85, 247, 0.3)' }}
+                variant="secondary"
+                size="lg"
+                glow={!isConnecting && !!gameId.trim()}
+                className="flex-1"
+                loading={isConnecting}
               >
                 {isConnecting ? 'Joining...' : 'Join'}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   setMode('menu');
                   setGameId('');
                   setError('');
                 }}
                 disabled={isConnecting}
-                className="flex-1 px-6 py-3 bg-gray-800 bg-opacity-50 border border-gray-700 text-gray-300 rounded-lg font-semibold hover:bg-gray-700 transition disabled:opacity-50"
+                variant="neutral"
+                size="lg"
+                className="flex-1"
               >
                 Back
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     );
@@ -337,14 +354,14 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
         <div className="max-w-md w-full space-y-6">
-          <div className="bg-black bg-opacity-60 backdrop-blur-sm rounded-lg p-6 space-y-4 border border-gray-700">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-              <h2 className="text-2xl font-semibold mb-2">Reconnecting...</h2>
+          <Card padding="lg">
+            <div className="text-center space-y-4">
+              <Spinner size="xl" variant="primary" className="mx-auto" />
+              <h2 className="text-2xl font-semibold">Reconnecting...</h2>
               <p className="text-gray-400">Joining game {gameId}</p>
-              {playerName && <p className="text-gray-400 mt-2">as {playerName}</p>}
+              {playerName && <p className="text-gray-400">as {playerName}</p>}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     );
@@ -366,7 +383,7 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
         <div className="max-w-2xl w-full space-y-6">
-          <div className="bg-black bg-opacity-60 backdrop-blur-sm rounded-lg p-6 space-y-6 border border-gray-700">
+          <Card padding="lg" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-semibold">Game Lobby</h2>
               <div className="text-center">
@@ -376,16 +393,16 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
             </div>
 
             {/* Copy Invite Button */}
-            <button
+            <Button
               onClick={handleCopyInvite}
-              className="w-full px-4 py-3 bg-purple-500 bg-opacity-20 border border-purple-500 text-purple-400 rounded-lg font-semibold hover:bg-opacity-30 transition flex items-center justify-center gap-2"
-              style={{ boxShadow: '0 0 20px rgba(168, 85, 247, 0.2)' }}
+              variant="secondary"
+              size="md"
+              fullWidth
+              className="shadow-glow-pink"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
+              <Icons.copy size={20} />
               Copy Invite Link
-            </button>
+            </Button>
 
             <div className="space-y-2">
               <p className="text-sm text-gray-400 uppercase tracking-wide">
@@ -393,82 +410,97 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
               </p>
               <div className="space-y-2">
                 {lobby.players.map((player) => (
-                  <div
+                  <Card
                     key={player.id}
-                    className="flex items-center justify-between p-3 bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-lg border border-gray-700"
+                    variant="default"
+                    padding="sm"
+                    className="flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg border-2 bg-cyan-500 bg-opacity-20 border-cyan-500">
-                        🔍
-                      </div>
+                      <Avatar variant="detective" size="md">
+                        <Icons.search size={16} />
+                      </Avatar>
                       <div>
                         <p className="font-semibold">{player.name}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {player.isHost && (
-                        <span className="px-3 py-1 bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-400 text-xs rounded-full font-semibold">
+                        <Badge variant="gold" size="sm">
+                          <Icons.crown size={12} />
                           Host
-                        </span>
+                        </Badge>
                       )}
                       {player.isReady && (
-                        <span className="px-3 py-1 bg-green-500 bg-opacity-20 border border-green-500 text-green-400 text-xs rounded-full font-semibold">
-                          ✓ Ready
-                        </span>
+                        <Badge variant="success" size="sm">
+                          <Icons.check size={12} />
+                          Ready
+                        </Badge>
                       )}
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
             </div>
 
             {error && (
-              <div className="p-3 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg text-red-300 text-sm">
-                {error}
-              </div>
+              <Card variant="danger" padding="sm">
+                <p className="text-red-300 text-sm">{error}</p>
+              </Card>
             )}
 
             <div className="flex gap-3">
               {!isHost && (
-                <button
+                <Button
                   onClick={handleReady}
-                  className={`flex-1 px-6 py-3 rounded-lg font-semibold transition border-2 ${
-                    me?.isReady
-                      ? 'bg-green-500 bg-opacity-20 border-green-500 text-green-400 hover:bg-opacity-30'
-                      : 'bg-gray-800 bg-opacity-50 border-gray-600 text-gray-300 hover:bg-gray-700'
-                  }`}
-                  style={{
-                    boxShadow: me?.isReady ? '0 0 20px rgba(34, 197, 94, 0.3)' : 'none'
-                  }}
+                  variant={me?.isReady ? 'success' : 'neutral'}
+                  size="lg"
+                  glow={!!me?.isReady}
+                  className="flex-1"
                 >
-                  {me?.isReady ? '✓ Ready' : 'Ready Up'}
-                </button>
+                  {me?.isReady ? (
+                    <>
+                      <Icons.check size={20} />
+                      Ready
+                    </>
+                  ) : (
+                    'Ready Up'
+                  )}
+                </Button>
               )}
 
               {isHost && (
-                <button
+                <Button
                   onClick={handleStartGame}
                   disabled={!canStart}
-                  className="flex-1 px-6 py-3 bg-cyan-500 bg-opacity-20 border-2 border-cyan-500 text-cyan-400 rounded-lg font-semibold hover:bg-opacity-30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ boxShadow: canStart ? '0 0 20px rgba(6, 182, 212, 0.3)' : 'none' }}
+                  variant="primary"
+                  size="lg"
+                  glow={canStart}
+                  className="flex-1"
                 >
                   {lobby.players.length < 2
                     ? 'Waiting for players...'
                     : !allReady
                     ? 'Waiting for ready...'
-                    : 'Start Game'}
-                </button>
+                    : (
+                      <>
+                        <Icons.play size={20} />
+                        Start Game
+                      </>
+                    )}
+                </Button>
               )}
 
-              <button
+              <Button
                 onClick={handleLeave}
-                className="px-6 py-3 bg-red-500 bg-opacity-20 border-2 border-red-500 text-red-400 rounded-lg font-semibold hover:bg-opacity-30 transition"
-                style={{ boxShadow: '0 0 20px rgba(239, 68, 68, 0.2)' }}
+                variant="danger"
+                size="lg"
+                className="shadow-glow-red"
               >
                 Leave
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     );

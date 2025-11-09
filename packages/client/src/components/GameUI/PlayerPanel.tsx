@@ -2,10 +2,26 @@ import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import type { Player } from '@shared/types/game';
 import { TRANSPORT_COLORS, TRANSPORT_ICONS } from '@shared';
+import { Card, Avatar, Icons } from '../../design-system';
 
 export function PlayerPanel() {
   const { players, currentPlayerIndex } = useGameStore();
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
+
+  // Transport color backgrounds (using opacity values)
+  const transportBackgrounds = {
+    taxi: 'bg-[#FFD700] bg-opacity-10',
+    bus: 'bg-[#32CD32] bg-opacity-10',
+    underground: 'bg-[#FF1493] bg-opacity-10',
+    water: 'bg-[#00CED1] bg-opacity-10',
+  };
+
+  const transportIconBackgrounds = {
+    taxi: 'bg-[#FFD700] bg-opacity-30',
+    bus: 'bg-[#32CD32] bg-opacity-30',
+    underground: 'bg-[#FF1493] bg-opacity-30',
+    water: 'bg-[#00CED1] bg-opacity-30',
+  };
 
   return (
     <div className="absolute top-20 left-4 w-72 space-y-2 z-20">
@@ -14,13 +30,13 @@ export function PlayerPanel() {
         const isExpanded = expandedPlayerId === player.id;
 
         return (
-          <div
+          <Card
             key={player.id}
             onClick={() => setExpandedPlayerId(isExpanded ? null : player.id)}
-            className={`bg-black bg-opacity-60 backdrop-blur-sm rounded-lg p-3 border transition-all cursor-pointer ${
-              isCurrent
-                ? 'border-cyan-500 shadow-lg shadow-cyan-500/30'
-                : 'border-gray-700 hover:border-gray-600'
+            variant={isCurrent ? 'primary' : 'default'}
+            padding="sm"
+            className={`transition-all cursor-pointer ${
+              isCurrent ? 'shadow-glow-cyan' : 'hover:border-gray-600'
             }`}
           >
             {/* Collapsed View */}
@@ -31,15 +47,12 @@ export function PlayerPanel() {
               )}
 
               {/* Player Icon */}
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-lg border-2 flex-shrink-0 ${
-                  player.role === 'mr-x'
-                    ? 'bg-pink-500 bg-opacity-20 border-pink-500 text-pink-400'
-                    : 'bg-cyan-500 bg-opacity-20 border-cyan-500 text-cyan-400'
-                }`}
+              <Avatar
+                variant={player.role === 'mr-x' ? 'mrx' : 'detective'}
+                size="md"
               >
-                {player.role === 'mr-x' ? '❓' : '🔍'}
-              </div>
+                {player.role === 'mr-x' ? '❓' : <Icons.search size={16} />}
+              </Avatar>
 
               {/* Player Info */}
               <div className="flex-1 min-w-0">
@@ -64,21 +77,12 @@ export function PlayerPanel() {
               </div>
 
               {/* Expand Indicator */}
-              <svg
-                className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${
+              <Icons.chevronDown
+                size={20}
+                className={`text-gray-400 transition-transform flex-shrink-0 ${
                   isExpanded ? 'rotate-180' : ''
                 }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+              />
             </div>
 
             {/* Expanded View - Tickets */}
@@ -91,16 +95,10 @@ export function PlayerPanel() {
                   {(['taxi', 'bus', 'underground', 'water'] as const).map((transport) => (
                     <div
                       key={transport}
-                      className="flex items-center gap-2 p-2 rounded-lg border border-gray-700"
-                      style={{
-                        backgroundColor: `${TRANSPORT_COLORS[transport]}10`,
-                      }}
+                      className={`flex items-center gap-2 p-2 rounded-lg border border-gray-700 ${transportBackgrounds[transport]}`}
                     >
                       <div
-                        className="w-7 h-7 rounded flex items-center justify-center text-base"
-                        style={{
-                          backgroundColor: `${TRANSPORT_COLORS[transport]}30`,
-                        }}
+                        className={`w-7 h-7 rounded flex items-center justify-center text-base ${transportIconBackgrounds[transport]}`}
                       >
                         {TRANSPORT_ICONS[transport]}
                       </div>
@@ -116,7 +114,7 @@ export function PlayerPanel() {
                 </div>
               </div>
             )}
-          </div>
+          </Card>
         );
       })}
     </div>
