@@ -224,11 +224,11 @@ export class GameRoom {
     const players = await this.playerManager.getAllPlayers();
     const hostId = await this.playerManager.getHostId();
 
-    const lobbyPlayers: LobbyPlayer[] = players.map((p: DBPlayer) => ({
+    const lobbyPlayers: LobbyPlayer[] = players.map((p: any) => ({
       id: p.id,
       name: p.name,
-      isReady: p.isReady,
-      isHost: p.isHost,
+      isReady: !!p.is_ready,  // Postgres transform not working, use snake_case
+      isHost: !!p.is_host,    // Coerce to boolean
     }));
 
     return {
@@ -260,22 +260,22 @@ export class GameRoom {
       ORDER BY created_at
     `;
 
-    const gamePlayers: Player[] = players.map((p: DBPlayer) => ({
+    const gamePlayers: Player[] = players.map((p: any) => ({
       id: p.id,
       name: p.name,
-      role: p.role!,
+      role: p.role,
       position: p.position,
       tickets: typeof p.tickets === 'string' ? JSON.parse(p.tickets) : p.tickets,
-      isStuck: p.isStuck,
+      isStuck: p.is_stuck,  // Postgres transform not working, use snake_case
     }));
 
-    const moveHistory = moves.map((m: DBMove) => ({
-      playerId: m.playerId,
-      playerName: m.playerName,
+    const moveHistory = moves.map((m: any) => ({
+      playerId: m.player_id,       // Use snake_case
+      playerName: m.player_name,   // Use snake_case
       playerRole: m.role,
       role: m.role,
-      from: m.fromStation,
-      to: m.toStation,
+      from: m.from_station,        // Use snake_case
+      to: m.to_station,            // Use snake_case
       transport: m.transport,
       round: m.round,
       timestamp: Number(m.timestamp),
