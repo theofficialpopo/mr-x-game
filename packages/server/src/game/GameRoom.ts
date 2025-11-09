@@ -227,13 +227,16 @@ export class GameRoom {
       return { success: false, error: validation.error };
     }
 
-    // Apply move to database
-    await this.stateManager.applyMove(currentPlayer, stationId, transport, gameState.round);
-
     // Check if this is part of a double move
     const isDoubleMoveActive = gameState.isDoubleMoveActive;
     const isFirstMoveOfDouble = isDoubleMoveActive && !gameState.doubleMoveFirstMove;
     const isSecondMoveOfDouble = isDoubleMoveActive && gameState.doubleMoveFirstMove;
+
+    // Scotland Yard rule: First move of a double move must be revealed (transport type shown to detectives)
+    const isRevealed = isFirstMoveOfDouble;
+
+    // Apply move to database
+    await this.stateManager.applyMove(currentPlayer, stationId, transport, gameState.round, isRevealed);
 
     if (isFirstMoveOfDouble) {
       // This is the first move of a double move - store it and don't advance turn
@@ -361,6 +364,7 @@ export class GameRoom {
       transport: m.transport,
       round: m.round,
       timestamp: Number(m.timestamp),
+      isRevealed: !!m.is_revealed, // Use snake_case
     }));
 
     return {

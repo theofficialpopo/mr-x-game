@@ -3,7 +3,11 @@ import { MR_X_REVEAL_ROUNDS, TRANSPORT_ICONS } from '@shared';
 import type { Move } from '@shared/types/game';
 import { socketService } from '../../services/socket';
 
-export function MoveHistoryClipboard() {
+interface MoveHistoryClipboardProps {
+  visible: boolean;
+}
+
+export function MoveHistoryClipboard({ visible }: MoveHistoryClipboardProps) {
   const currentRound = useGameStore((state) => state.round);
   const players = useGameStore((state) => state.players);
   const moveHistory = useGameStore((state) => state.moveHistory);
@@ -22,15 +26,19 @@ export function MoveHistoryClipboard() {
   };
 
   return (
-    <div className="absolute top-20 right-4 w-64 z-20">
+    <div
+      className={`absolute top-20 right-4 w-64 z-20 transition-all duration-500 ease-in-out ${
+        visible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
+      }`}
+    >
       {/* Clipboard */}
-      <div className="bg-amber-50 rounded-lg shadow-2xl border-4 border-amber-900 relative">
+      <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg shadow-2xl border-4 border-amber-800 relative backdrop-blur-sm">
         {/* Clipboard Clip */}
-        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-gray-700 rounded-t-lg border-2 border-gray-800 shadow-lg"></div>
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-gradient-to-b from-gray-600 to-gray-800 rounded-t-lg border-2 border-gray-900 shadow-lg"></div>
 
         {/* Header */}
-        <div className="bg-amber-100 border-b-2 border-amber-900 p-3 rounded-t-md">
-          <h3 className="text-center font-bold text-gray-900 text-sm">
+        <div className="bg-gradient-to-r from-amber-200 to-amber-300 border-b-2 border-amber-800 p-3 rounded-t-md">
+          <h3 className="text-center font-bold text-gray-900 text-sm tracking-wide">
             🕵️ Mr. X Travel Log
           </h3>
         </div>
@@ -47,8 +55,8 @@ export function MoveHistoryClipboard() {
               // Show transport if:
               // - You are Mr. X (see all your moves)
               // - It's a reveal round and the move has been made
-              // - It's a past reveal round
-              const shouldShowTransport = move && (isMrX || (isRevealRound && isPast));
+              // - The move is explicitly marked as revealed (first move of double move)
+              const shouldShowTransport = move && (isMrX || (isRevealRound && isPast) || move.isRevealed);
 
               return (
                 <div
@@ -96,14 +104,14 @@ export function MoveHistoryClipboard() {
         </div>
 
         {/* Legend */}
-        <div className="bg-amber-100 border-t-2 border-amber-900 p-2 rounded-b-md text-xs">
-          <div className="flex items-center justify-center gap-3 text-gray-700">
+        <div className="bg-gradient-to-r from-amber-200 to-amber-300 border-t-2 border-amber-800 p-2 rounded-b-md text-xs">
+          <div className="flex items-center justify-center gap-3 text-gray-800 font-semibold">
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded border-2 border-pink-600 bg-pink-100"></div>
+              <div className="w-3 h-3 rounded border-2 border-pink-600 bg-pink-100 shadow-sm"></div>
               <span>Reveal</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded border-2 border-cyan-500 bg-cyan-100"></div>
+              <div className="w-3 h-3 rounded border-2 border-cyan-500 bg-cyan-100 shadow-sm"></div>
               <span>Current</span>
             </div>
           </div>

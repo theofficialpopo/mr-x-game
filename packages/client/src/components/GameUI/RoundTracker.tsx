@@ -10,6 +10,8 @@ interface RoundTrackerProps {
   onViewModeChange: (mode: 'svg' | 'mapbox') => void;
   showLegend: boolean;
   onToggleLegend: () => void;
+  showClipboard: boolean;
+  onToggleClipboard: () => void;
   onLeaveGame: () => void;
 }
 
@@ -18,6 +20,8 @@ export function RoundTracker({
   onViewModeChange,
   showLegend,
   onToggleLegend,
+  showClipboard,
+  onToggleClipboard,
   onLeaveGame,
 }: RoundTrackerProps) {
   const { round, getCurrentPlayer, isDoubleMoveActive } = useGameStore();
@@ -120,14 +124,30 @@ export function RoundTracker({
           )}
         </div>
 
-        {/* Right side - Settings */}
-        <SettingsButton
-          viewMode={viewMode}
-          onViewModeChange={onViewModeChange}
-          showLegend={showLegend}
-          onToggleLegend={onToggleLegend}
-          onLeaveGame={onLeaveGame}
-        />
+        {/* Right side - Controls */}
+        <div className="flex items-center gap-2">
+          {/* Clipboard Toggle */}
+          <button
+            onClick={onToggleClipboard}
+            className={`w-10 h-10 bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg border transition-all flex items-center justify-center group ${
+              showClipboard ? 'border-amber-500' : 'border-gray-700 hover:border-cyan-500'
+            }`}
+            title={showClipboard ? 'Hide clipboard' : 'Show clipboard'}
+          >
+            <span className={`text-xl transition-all ${showClipboard ? '' : 'grayscale opacity-50'}`}>
+              📋
+            </span>
+          </button>
+
+          {/* Settings */}
+          <SettingsButton
+            viewMode={viewMode}
+            onViewModeChange={onViewModeChange}
+            showLegend={showLegend}
+            onToggleLegend={onToggleLegend}
+            onLeaveGame={onLeaveGame}
+          />
+        </div>
       </div>
     </div>
   );

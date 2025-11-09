@@ -22,7 +22,8 @@ export class GameStateManager {
     player: Player,
     toStationId: number,
     transport: TransportType,
-    round: number
+    round: number,
+    isRevealed: boolean = false
   ): Promise<void> {
     const oldPosition = player.position;
     const newTickets = { ...player.tickets };
@@ -47,7 +48,7 @@ export class GameStateManager {
     await sql`
       INSERT INTO moves (
         game_id, player_id, player_name, role,
-        from_station, to_station, transport, round, timestamp
+        from_station, to_station, transport, round, timestamp, is_revealed
       )
       VALUES (
         ${this.gameId},
@@ -58,7 +59,8 @@ export class GameStateManager {
         ${toStationId},
         ${transport},
         ${round},
-        ${Date.now()}
+        ${Date.now()},
+        ${isRevealed}
       )
     `;
 

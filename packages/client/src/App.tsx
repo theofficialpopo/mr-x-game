@@ -20,6 +20,7 @@ function GameContainer({ gameIdFromUrl }: { gameIdFromUrl?: string }) {
   const { phase, setBoard, initializeWebSocket, cleanupWebSocket, resetGame } = useGameStore();
   const [viewMode, setViewMode] = useState<ViewMode>('svg');
   const [showLegend, setShowLegend] = useState(true);
+  const [showClipboard, setShowClipboard] = useState(true);
   const navigate = useNavigate();
 
   const handleBackToLobby = async () => {
@@ -87,6 +88,8 @@ function GameContainer({ gameIdFromUrl }: { gameIdFromUrl?: string }) {
         onViewModeChange={setViewMode}
         showLegend={showLegend}
         onToggleLegend={() => setShowLegend(!showLegend)}
+        showClipboard={showClipboard}
+        onToggleClipboard={() => setShowClipboard(!showClipboard)}
         onLeaveGame={handleBackToLobby}
       />
 
@@ -96,7 +99,7 @@ function GameContainer({ gameIdFromUrl }: { gameIdFromUrl?: string }) {
         <PlayerPanel />
 
         {/* Right Move History Clipboard */}
-        <MoveHistoryClipboard />
+        <MoveHistoryClipboard visible={showClipboard} />
 
         {/* Game Board */}
         <GameBoard
