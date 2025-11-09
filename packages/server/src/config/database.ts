@@ -30,7 +30,8 @@ function getSQL(): ReturnType<typeof postgres> {
       connect_timeout: 10, // Connection timeout in seconds
 
       // SSL configuration (required for Neon)
-      ssl: 'require',
+      // For Neon pooler endpoints, use rejectUnauthorized: false
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 
       // Error handling
       onnotice: () => {}, // Suppress notices in production
