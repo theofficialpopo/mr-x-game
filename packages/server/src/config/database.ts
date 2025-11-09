@@ -1,4 +1,4 @@
-import { neon, type NeonQueryFunction } from '@neondatabase/serverless';
+import postgres from 'postgres';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -6,11 +6,11 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// SQL client will be initialized lazily
-let _sql: NeonQueryFunction<false, false> | null = null;
+// SQL client with persistent connection pool
+let _sql: ReturnType<typeof postgres> | null = null;
 
-// Get or create SQL client
-function getSQL(): NeonQueryFunction<false, false> {
+// Get or create SQL client with persistent connection pool
+function getSQL(): ReturnType<typeof postgres> {
   if (!_sql) {
     const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -21,22 +21,63 @@ function getSQL(): NeonQueryFunction<false, false> {
       process.exit(1);
     }
 
-    _sql = neon(DATABASE_URL);
+    // Create postgres client with production-ready connection pooling
+    _sql = postgres(DATABASE_URL, {
+      // Connection pool configuration
+      max: 20, // Maximum 20 connections (supports 1000+ concurrent users)
+      idle_timeout: 30, // Close idle connections after 30 seconds
+      max_lifetime: 60 * 60, // Recycle connections after 1 hour
+      connect_timeout: 10, // Connection timeout in seconds
+
+      // SSL configuration (required for Neon)
+      ssl: 'require',
+
+      // Error handling
+      onnotice: () => {}, // Suppress notices in production
+
+      // Connection management
+      connection: {
+        application_name: 'scotland-yard-game',
+      },
+
+      // Transform column names from snake_case to camelCase
+      transform: {
+        column: {
+          to: postgres.toCamel,
+          from: postgres.fromCamel,
+        },
+      },
+    });
+
+    console.log('✅ PostgreSQL connection pool initialized (max: 20 connections)');
   }
 
   return _sql;
 }
 
-// Export sql wrapper that initializes on first use
-export const sql = ((strings: TemplateStringsArray, ...values: any[]) => {
-  return getSQL()(strings, ...values);
-}) as unknown as NeonQueryFunction<false, false>;
+// Export sql client - uses persistent connection pool
+export const sql = getSQL();
+
+// Graceful shutdown - close all connections
+export async function closeDatabase(): Promise<void> {
+  if (_sql) {
+    console.log('🔌 Closing database connections...');
+    await _sql.end({ timeout: 5 });
+    _sql = null;
+    console.log('✅ Database connections closed');
+  }
+}
 
 /**
  * Initialize database schema
  */
 export async function initializeDatabase(): Promise<void> {
   try {
+    // Test database connection
+    console.log('🔌 Testing database connection...');
+    await sql`SELECT 1 as health_check`;
+    console.log('✅ Database connection successful');
+
     // Read schema file
     const schemaPath = path.join(__dirname, '../db/schema.sql');
     const schema = await fs.readFile(schemaPath, 'utf-8');
@@ -54,12 +95,9 @@ export async function initializeDatabase(): Promise<void> {
 
     console.log(`Executing ${statements.length} SQL statements...`);
 
-    // Execute each statement individually using tagged template syntax
-    for (let i = 0; i < statements.length; i++) {
-      const statement = statements[i];
-      // Manually construct a tagged template call for each statement
-      const templateStrings = Object.assign([statement], { raw: [statement] });
-      await sql(templateStrings as any);
+    // Execute each statement individually
+    for (const statement of statements) {
+      await sql.unsafe(statement);
     }
 
     console.log('✅ Database schema initialized');
@@ -112,8 +150,7 @@ async function runMigrations(): Promise<void> {
         .filter(s => s.length > 0);
 
       for (const statement of statements) {
-        const templateStrings = Object.assign([statement], { raw: [statement] });
-        await sql(templateStrings as any);
+        await sql.unsafe(statement);
       }
 
       console.log(`✅ Applied migration: ${file}`);

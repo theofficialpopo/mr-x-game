@@ -1,0 +1,48 @@
+# Dependencies
+node_modules
+packages/*/node_modules
+
+# Build outputs
+packages/*/dist
+packages/*/build
+.next
+
+# Development files
+*.log
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+.github
+
+# Documentation and reports
+*.md
+!README.md
+ARCHITECTURE_REVIEW.md
+CODE_QUALITY_REPORT.md
+PROJECT_PROGRESS_ANALYSIS.md
+SECURITY_AUDIT_REPORT.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+packages/*/coverage
+
+# Misc
+.railwayignore
+railway-deploy.md
+Procfile
+nixpacks.toml

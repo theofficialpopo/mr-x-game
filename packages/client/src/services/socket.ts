@@ -21,7 +21,15 @@ class SocketService {
   private serverUrl: string;
 
   constructor() {
-    this.serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+    // In production, client is served from same server, so connect to same origin
+    // In development, use VITE_SERVER_URL or fallback to localhost:3001
+    if (import.meta.env.PROD) {
+      // Production: use same origin (Railway domain)
+      this.serverUrl = window.location.origin;
+    } else {
+      // Development: use env var or localhost
+      this.serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+    }
   }
 
   /**

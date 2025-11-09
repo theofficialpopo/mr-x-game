@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { MR_X_REVEAL_ROUNDS } from '@shared/index';
+import { Button } from '../ui';
 
 
 interface RoundTrackerProps {
@@ -148,16 +149,16 @@ function SettingsButton({
         <div className="absolute top-12 right-0 w-64 bg-black bg-opacity-60 backdrop-blur-sm rounded-lg border border-gray-700 p-4 shadow-xl z-50">
           <h3 className="font-bold text-white mb-3 text-sm">Map View</h3>
           <div className="space-y-2">
-            <button
+            <Button
               onClick={() => {
                 onViewModeChange('mapbox');
                 setIsOpen(false);
               }}
-              className={`w-full py-3 px-4 rounded-lg text-sm font-semibold transition flex items-center gap-3 ${
-                viewMode === 'mapbox'
-                  ? 'bg-cyan-500 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
+              variant="primary"
+              size="md"
+              fullWidth
+              active={viewMode === 'mapbox'}
+              className="justify-start"
             >
               <span className="text-xl">🗺️</span>
               <div className="flex-1 text-left">
@@ -173,17 +174,17 @@ function SettingsButton({
                   />
                 </svg>
               )}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 onViewModeChange('svg');
                 setIsOpen(false);
               }}
-              className={`w-full py-3 px-4 rounded-lg text-sm font-semibold transition flex items-center gap-3 ${
-                viewMode === 'svg'
-                  ? 'bg-cyan-500 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
+              variant="primary"
+              size="md"
+              fullWidth
+              active={viewMode === 'svg'}
+              className="justify-start"
             >
               <span className="text-xl">📊</span>
               <div className="flex-1 text-left">
@@ -199,7 +200,7 @@ function SettingsButton({
                   />
                 </svg>
               )}
-            </button>
+            </Button>
           </div>
 
           {/* Transport Legend Toggle */}
@@ -231,19 +232,22 @@ function SettingsButton({
 
           {/* Leave Game */}
           <div className="mt-4 pt-4 border-t border-gray-700">
-            <button
+            <Button
               onClick={() => {
                 onLeaveGame();
                 setIsOpen(false);
               }}
-              className="w-full py-3 px-4 rounded-lg text-sm font-semibold transition flex items-center gap-3 bg-red-500 bg-opacity-20 border border-red-500 text-red-400 hover:bg-opacity-30"
+              variant="outline"
+              size="md"
+              fullWidth
+              className="justify-start border-red-500 text-red-400 hover:border-red-400 bg-red-500 bg-opacity-20 hover:bg-opacity-30"
             >
               <span className="text-xl">🚪</span>
               <div className="flex-1 text-left">
                 <div className="font-semibold">Leave Game</div>
                 <div className="text-xs opacity-75">Return to lobby</div>
               </div>
-            </button>
+            </Button>
           </div>
         </div>
       )}

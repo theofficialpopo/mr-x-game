@@ -331,7 +331,7 @@ export class GameRoom {
       name: p.name,
       role: p.role,
       position: p.position,
-      tickets: p.tickets,
+      tickets: typeof p.tickets === 'string' ? JSON.parse(p.tickets) : p.tickets,
       isStuck: p.is_stuck,
     }));
 
@@ -379,6 +379,9 @@ export class GameRoom {
 
     // Clone players and filter Mr. X position
     const players: Player[] = gameState.players.map(p => {
+      // Ensure tickets are properly parsed
+      const tickets = typeof p.tickets === 'string' ? JSON.parse(p.tickets) : p.tickets;
+
       if (p.role === 'mr-x' && player.role !== 'mr-x') {
         if (isMrXRevealed) {
           // During reveal rounds, show Mr. X's position
@@ -389,17 +392,19 @@ export class GameRoom {
 
           return {
             ...p,
+            tickets,
             position: revealedPosition,
           };
         } else {
           // Hide Mr. X position from detectives when not revealed
           return {
             ...p,
+            tickets,
             position: -1, // -1 indicates hidden position
           };
         }
       }
-      return { ...p };
+      return { ...p, tickets };
     });
 
     return {
