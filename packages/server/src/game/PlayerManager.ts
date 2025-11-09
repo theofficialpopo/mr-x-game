@@ -1,4 +1,6 @@
 import { sql } from '../config/database.js';
+import { logger } from '../utils/logger.js';
+import type { DBPlayer, DBGame } from '../types/database.js';
 
 /**
  * PlayerManager handles all player-related operations for a game
@@ -54,7 +56,7 @@ export class PlayerManager {
         SET id = ${playerId}, player_uuid = ${playerUUID || null}
         WHERE name = ${playerName} AND game_id = ${this.gameId}
       `;
-      console.log(`🔄 Player ${playerName} (UUID: ${playerUUID || 'legacy'}) reconnected to game ${this.gameId} (phase: ${game[0].phase})`);
+      logger.info(`🔄 Player ${playerName} (UUID: ${playerUUID || 'legacy'}) reconnected to game ${this.gameId} (phase: ${game[0].phase})`);
       return true;
     }
 
@@ -88,7 +90,7 @@ export class PlayerManager {
       )
     `;
 
-    console.log(`👤 Player ${playerName} (UUID: ${playerUUID || 'none'}) joined game ${this.gameId}`);
+    logger.info(`👤 Player ${playerName} (UUID: ${playerUUID || 'none'}) joined game ${this.gameId}`);
     return true;
   }
 
@@ -118,7 +120,7 @@ export class PlayerManager {
 
     if (remainingPlayers.length === 0) {
       // No players left - signal game should be destroyed
-      console.log(`👥 No players remain in game ${this.gameId} - signaling for destruction`);
+      logger.info(`👥 No players remain in game ${this.gameId} - signaling for destruction`);
       return true;
     }
 
@@ -153,7 +155,7 @@ export class PlayerManager {
   /**
    * Get all players for the game
    */
-  async getAllPlayers() {
+  async getAllPlayers(): Promise<DBPlayer[]> {
     return await sql`
       SELECT * FROM players
       WHERE game_id = ${this.gameId}

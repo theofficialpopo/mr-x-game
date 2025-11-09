@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 import { sql } from '../config/database.js';
 import { PlayerManager } from './PlayerManager.js';
 import { logger } from '../utils/logger.js';
+import type { DBGame, DBPlayer, DBMove } from '../types/database.js';
 import {
   Board,
   validateMove,
@@ -291,11 +292,11 @@ export class GameRoom {
     const players = await this.playerManager.getAllPlayers();
     const hostId = await this.playerManager.getHostId();
 
-    const lobbyPlayers: LobbyPlayer[] = players.map((p: any) => ({
+    const lobbyPlayers: LobbyPlayer[] = players.map((p: DBPlayer) => ({
       id: p.id,
       name: p.name,
-      isReady: !!p.is_ready,  // Coerce to boolean
-      isHost: !!p.is_host,    // Coerce to boolean
+      isReady: p.isReady,
+      isHost: p.isHost,
     }));
 
     return {
@@ -327,22 +328,22 @@ export class GameRoom {
       ORDER BY created_at
     `;
 
-    const gamePlayers: Player[] = players.map((p: any) => ({
+    const gamePlayers: Player[] = players.map((p: DBPlayer) => ({
       id: p.id,
       name: p.name,
-      role: p.role,
+      role: p.role!,
       position: p.position,
       tickets: typeof p.tickets === 'string' ? JSON.parse(p.tickets) : p.tickets,
-      isStuck: p.is_stuck,
+      isStuck: p.isStuck,
     }));
 
-    const moveHistory = moves.map((m: any) => ({
-      playerId: m.player_id,
-      playerName: m.player_name,
+    const moveHistory = moves.map((m: DBMove) => ({
+      playerId: m.playerId,
+      playerName: m.playerName,
       playerRole: m.role,
       role: m.role,
-      from: m.from_station,
-      to: m.to_station,
+      from: m.fromStation,
+      to: m.toStation,
       transport: m.transport,
       round: m.round,
       timestamp: Number(m.timestamp),

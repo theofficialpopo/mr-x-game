@@ -5,6 +5,7 @@ import { GameRoom } from '../game/GameRoom.js';
 import { Board, parseBoardData } from '../../../shared/src/index.js';
 import { sql } from '../config/database.js';
 import { logger } from '../utils/logger.js';
+import type { DBPlayer } from '../types/database.js';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -409,13 +410,13 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
           SELECT id, is_ready FROM players WHERE game_id = ${gameId}
         `;
 
-        const readyPlayers = players.filter((p: any) => p.is_ready).map((p: any) => p.id);
+        const readyPlayers = players.filter((p: DBPlayer) => p.isReady).map((p: DBPlayer) => p.id);
 
         // Broadcast ready status to all players in game
         io.to(gameId).emit('rematch:ready:updated', readyPlayers);
 
         // If all players are ready, start a new game
-        const allReady = players.every((p: any) => p.is_ready);
+        const allReady = players.every((p: DBPlayer) => p.isReady);
         if (allReady && players.length >= 2) {
           logger.info(`🔄 All players ready for rematch in game ${gameId}`);
 
