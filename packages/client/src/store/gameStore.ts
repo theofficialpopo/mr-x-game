@@ -183,28 +183,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
    */
   getValidMoves: () => {
     const { board, players, currentPlayerIndex } = get();
-    console.log('[getValidMoves] board:', board ? 'exists' : 'null');
-    console.log('[getValidMoves] players:', players);
-    console.log('[getValidMoves] currentPlayerIndex:', currentPlayerIndex);
-
-    if (!board) {
-      console.log('[getValidMoves] No board, returning empty array');
-      return [];
-    }
+    if (!board) return [];
 
     const currentPlayer = players[currentPlayerIndex];
-    console.log('[getValidMoves] currentPlayer:', currentPlayer);
-    console.log('[getValidMoves] currentPlayer tickets:', currentPlayer?.tickets);
-    console.log('[getValidMoves] currentPlayer tickets type:', typeof currentPlayer?.tickets);
+    if (!currentPlayer) return [];
 
-    if (!currentPlayer) {
-      console.log('[getValidMoves] No current player, returning empty array');
-      return [];
-    }
-
-    const validMoves = getValidMovesForPlayer(board, currentPlayer, players);
-    console.log('[getValidMoves] getValidMovesForPlayer returned:', validMoves);
-    return validMoves;
+    return getValidMovesForPlayer(board, currentPlayer, players);
   },
 
   /**
