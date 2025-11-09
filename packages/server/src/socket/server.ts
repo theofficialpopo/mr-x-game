@@ -1,5 +1,6 @@
 import { Server as SocketIOServer } from 'socket.io';
 import type { Server as HTTPServer } from 'http';
+import { z } from 'zod';
 import { GameRoom } from '../game/GameRoom.js';
 import { Board, parseBoardData } from '../../../shared/src/index.js';
 import { sql } from '../config/database.js';
@@ -11,6 +12,22 @@ import type {
   MoveResponse,
   MoveNotification,
 } from '../../../shared/src/index.js';
+
+/**
+ * Input validation schemas
+ */
+const playerNameSchema = z.string()
+  .min(1, 'Name required')
+  .max(50, 'Name too long')
+  .regex(/^[a-zA-Z0-9\s_-]+$/, 'Invalid characters in name');
+
+const gameIdSchema = z.string()
+  .length(6, 'Game ID must be 6 characters')
+  .regex(/^[a-f0-9]{6}$/, 'Invalid game ID format');
+
+const playerUUIDSchema = z.string()
+  .min(1, 'Player UUID required')
+  .max(100, 'Player UUID too long');
 
 /**
  * In-memory store for active game rooms
@@ -58,6 +75,19 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
      */
     socket.on('lobby:create', async (playerName, playerUUID, callback) => {
       try {
+        // Validate inputs
+        const validatedName = playerNameSchema.safeParse(playerName);
+        if (!validatedName.success) {
+          callback({ success: false, error: validatedName.error.errors[0].message });
+          return;
+        }
+
+        const validatedUUID = playerUUIDSchema.safeParse(playerUUID);
+        if (!validatedUUID.success) {
+          callback({ success: false, error: 'Invalid player UUID' });
+          return;
+        }
+
         if (!boardInstance) {
           callback({ success: false, error: 'Server not ready' });
           return;
@@ -70,7 +100,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
         gameRooms.set(gameId, gameRoom);
 
         // Add player to lobby
-        const added = await gameRoom.addPlayer(socket.id, playerName, playerUUID);
+        const added = await gameRoom.addPlayer(socket.id, validatedName.data, validatedUUID.data);
         if (!added) {
           callback({ success: false, error: 'Failed to join game' });
           return;
@@ -104,7 +134,26 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
      */
     socket.on('lobby:join', async (gameId, playerName, playerUUID, callback) => {
       try {
-        console.log(`🎯 Join attempt: ${playerName} (${socket.id}) -> game ${gameId}, UUID: ${playerUUID || 'none'}`);
+        // Validate inputs
+        const validatedGameId = gameIdSchema.safeParse(gameId);
+        if (!validatedGameId.success) {
+          callback({ success: false, error: validatedGameId.error.errors[0].message });
+          return;
+        }
+
+        const validatedName = playerNameSchema.safeParse(playerName);
+        if (!validatedName.success) {
+          callback({ success: false, error: validatedName.error.errors[0].message });
+          return;
+        }
+
+        const validatedUUID = playerUUIDSchema.safeParse(playerUUID);
+        if (!validatedUUID.success) {
+          callback({ success: false, error: 'Invalid player UUID' });
+          return;
+        }
+
+        console.log(`🎯 Join attempt: ${validatedName.data} (${socket.id}) -> game ${validatedGameId.data}, UUID: ${validatedUUID.data || 'none'}`);
 
         if (!boardInstance) {
           console.log('❌ Server not ready');
@@ -113,22 +162,22 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
         }
 
         // Get or load game room
-        let gameRoom = gameRooms.get(gameId);
+        let gameRoom = gameRooms.get(validatedGameId.data);
         if (!gameRoom) {
-          console.log(`🔍 Loading game ${gameId} from database...`);
-          const loadedRoom = await GameRoom.load(gameId, boardInstance);
+          console.log(`🔍 Loading game ${validatedGameId.data} from database...`);
+          const loadedRoom = await GameRoom.load(validatedGameId.data, boardInstance);
           if (!loadedRoom) {
-            console.log(`❌ Game ${gameId} not found`);
+            console.log(`❌ Game ${validatedGameId.data} not found`);
             callback({ success: false, error: 'Game not found' });
             return;
           }
           gameRoom = loadedRoom;
-          gameRooms.set(gameId, gameRoom);
+          gameRooms.set(validatedGameId.data, gameRoom);
         }
 
         // Add player to lobby
-        console.log(`➕ Adding player ${playerName} to game ${gameId}...`);
-        const added = await gameRoom.addPlayer(socket.id, playerName, playerUUID);
+        console.log(`➕ Adding player ${validatedName.data} to game ${validatedGameId.data}...`);
+        const added = await gameRoom.addPlayer(socket.id, validatedName.data, validatedUUID.data);
         if (!added) {
           console.log(`❌ Failed to add player ${playerName} to game ${gameId}`);
           callback({ success: false, error: 'Game is full' });

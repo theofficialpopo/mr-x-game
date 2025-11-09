@@ -55,8 +55,7 @@ export function GameBoard({
     // Combine and deduplicate
     const combined = [...new Set([...validStationIds, ...playerPositions])];
     setHighlightedStations(combined);
-    // Only depend on things that actually change, not the derived arrays
-  }, [currentPlayerIndex, phase, round, players.length]);
+  }, [currentPlayerIndex, phase, round, players, validMoves, isRevealed]);
 
   const handleStationClick = (stationId: number) => {
     if (phase !== 'playing') return;

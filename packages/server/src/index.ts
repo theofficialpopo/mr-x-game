@@ -1,6 +1,8 @@
 import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -19,14 +21,50 @@ const httpServer = createServer(app);
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? true // Allow same origin in production
+    ? process.env.CLIENT_URL
     : (process.env.CLIENT_URL || 'http://localhost:3000'),
   credentials: true,
+  methods: ['GET', 'POST']
+}));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "https://api.mapbox.com", "wss:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://api.mapbox.com"],
+      scriptSrc: ["'self'", "https://api.mapbox.com"],
+      imgSrc: ["'self'", "data:", "https://*.mapbox.com"],
+      workerSrc: ["'self'", "blob:"]
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
 }));
 app.use(express.json());
 
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Apply rate limiting to API routes
+app.use('/api/', limiter);
+
+// Stricter rate limiting for health check
+const healthLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10 // limit each IP to 10 health check requests per minute
+});
+
 // Health check endpoint
-app.get('/health', (_req, res) => {
+app.get('/health', healthLimiter, (_req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
 });
 
