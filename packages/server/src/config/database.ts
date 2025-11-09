@@ -35,18 +35,11 @@ function getSQL(): NeonQueryFunction<false, false> {
   return _sql;
 }
 
-// Export sql wrapper that initializes on first use
-export const sql = ((strings: TemplateStringsArray, ...values: any[]) => {
-  return getSQL()(strings, ...values);
-}) as unknown as NeonQueryFunction<false, false>;
-
-/**
- * Helper function to retry async operations with exponential backoff
- */
+// Helper function to retry async operations with exponential backoff
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
-  baseDelay: number = 2000
+  baseDelay: number = 1000
 ): Promise<T> {
   let lastError: Error | null = null;
 
@@ -58,7 +51,7 @@ async function retryWithBackoff<T>(
 
       if (attempt < maxRetries) {
         const delay = baseDelay * Math.pow(2, attempt);
-        console.log(`⚠️  Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        console.log(`⚠️  SQL query attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -66,6 +59,11 @@ async function retryWithBackoff<T>(
 
   throw lastError;
 }
+
+// Export sql wrapper with automatic retry logic for all queries
+export const sql = ((strings: TemplateStringsArray, ...values: any[]) => {
+  return retryWithBackoff(() => getSQL()(strings, ...values), 3, 1000);
+}) as unknown as NeonQueryFunction<false, false>;
 
 /**
  * Initialize database schema
