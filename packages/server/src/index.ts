@@ -27,8 +27,8 @@ app.get('/health', (_req, res) => {
 
 // Serve client static files in production
 if (process.env.NODE_ENV === 'production') {
-  // __dirname is dist/server/src, need to go up to packages/client/dist
-  const clientBuildPath = path.join(__dirname, '../../../../client/dist');
+  // __dirname is packages/server/src, need to go up to packages/client/dist
+  const clientBuildPath = path.join(__dirname, '../../client/dist');
   console.log(`📦 Serving client from: ${clientBuildPath}`);
   app.use(express.static(clientBuildPath));
 
