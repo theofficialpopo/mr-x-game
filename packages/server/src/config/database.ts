@@ -21,7 +21,15 @@ function getSQL(): NeonQueryFunction<false, false> {
       process.exit(1);
     }
 
-    _sql = neon(DATABASE_URL);
+    // Configure Neon client with increased timeout and connection pooling
+    _sql = neon(DATABASE_URL, {
+      fetchOptions: {
+        // Increase timeout to 30 seconds for Railway environment
+        signal: AbortSignal.timeout(30000),
+      },
+      // Enable connection caching for better performance
+      fetchConnectionCache: true,
+    });
   }
 
   return _sql;
@@ -33,36 +41,73 @@ export const sql = ((strings: TemplateStringsArray, ...values: any[]) => {
 }) as unknown as NeonQueryFunction<false, false>;
 
 /**
+ * Helper function to retry async operations with exponential backoff
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 2000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`⚠️  Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/**
  * Initialize database schema
  */
 export async function initializeDatabase(): Promise<void> {
   try {
-    // Read schema file
-    const schemaPath = path.join(__dirname, '../db/schema.sql');
-    const schema = await fs.readFile(schemaPath, 'utf-8');
+    // Test database connection first
+    console.log('🔌 Testing database connection...');
+    await retryWithBackoff(async () => {
+      await sql`SELECT 1 as health_check`;
+      console.log('✅ Database connection successful');
+    }, 4, 2000); // More retries for initial connection
 
-    // Remove comments and split into individual statements
-    const cleanedSchema = schema
-      .split('\n')
-      .filter(line => !line.trim().startsWith('--'))
-      .join('\n');
+    // Initialize schema with retry logic
+    await retryWithBackoff(async () => {
+      // Read schema file
+      const schemaPath = path.join(__dirname, '../db/schema.sql');
+      const schema = await fs.readFile(schemaPath, 'utf-8');
 
-    const statements = cleanedSchema
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
+      // Remove comments and split into individual statements
+      const cleanedSchema = schema
+        .split('\n')
+        .filter(line => !line.trim().startsWith('--'))
+        .join('\n');
 
-    console.log(`Executing ${statements.length} SQL statements...`);
+      const statements = cleanedSchema
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
 
-    // Execute each statement individually using tagged template syntax
-    for (let i = 0; i < statements.length; i++) {
-      const statement = statements[i];
-      // Manually construct a tagged template call for each statement
-      const templateStrings = Object.assign([statement], { raw: [statement] });
-      await sql(templateStrings as any);
-    }
+      console.log(`Executing ${statements.length} SQL statements...`);
 
-    console.log('✅ Database schema initialized');
+      // Execute each statement individually using tagged template syntax
+      for (let i = 0; i < statements.length; i++) {
+        const statement = statements[i];
+        // Manually construct a tagged template call for each statement
+        const templateStrings = Object.assign([statement], { raw: [statement] });
+        await sql(templateStrings as any);
+      }
+
+      console.log('✅ Database schema initialized');
+    }, 3, 2000);
 
     // Run migrations
     await runMigrations();
