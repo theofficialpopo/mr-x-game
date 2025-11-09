@@ -23,7 +23,7 @@ const playerNameSchema = z.string()
 
 const gameIdSchema = z.string()
   .length(6, 'Game ID must be 6 characters')
-  .regex(/^[a-f0-9]{6}$/, 'Invalid game ID format');
+  .regex(/^[a-fA-F0-9]{6}$/, 'Invalid game ID format');
 
 const playerUUIDSchema = z.string()
   .min(1, 'Player UUID required')
