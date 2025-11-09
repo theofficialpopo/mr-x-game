@@ -181,11 +181,25 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
   };
 
   const handleReady = () => {
-    if (!lobby) return;
+    logger.info('[Lobby] handleReady called');
+    if (!lobby) {
+      logger.info('[Lobby] No lobby, returning');
+      return;
+    }
 
-    const me = lobby.players.find(p => p.id === socketService.getSocketId());
-    if (!me) return;
+    const socketId = socketService.getSocketId();
+    logger.info('[Lobby] Socket ID:', socketId);
+    logger.info('[Lobby] Lobby players:', lobby.players.map(p => ({ id: p.id, name: p.name, isHost: p.isHost, isReady: p.isReady })));
 
+    const me = lobby.players.find(p => p.id === socketId);
+    logger.info('[Lobby] Found me:', me);
+
+    if (!me) {
+      logger.info('[Lobby] Player not found in lobby, returning');
+      return;
+    }
+
+    logger.info('[Lobby] Setting ready to:', !me.isReady);
     socketService.setReady(!me.isReady);
   };
 
@@ -255,6 +269,8 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
     const isHost = me?.isHost ?? false;
     const allReady = lobby.players.every(p => p.isReady || p.isHost);
     const canStart = isHost && lobby.players.length >= 2 && allReady;
+
+    logger.debug('[Lobby] Rendering waiting lobby - isHost:', isHost, 'isPlayerReady:', me?.isReady, 'me:', me);
 
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
