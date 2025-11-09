@@ -29,12 +29,55 @@ export function validateMove(
 ): ValidationResult {
   const fromId = player.position;
 
-  // Check if player has required ticket
-  if (!hasTicket(player.tickets, transport)) {
-    return {
-      valid: false,
-      error: `Not enough ${transport} tickets`,
-    };
+  // Special handling for black tickets (Mr. X only)
+  if (transport === 'black') {
+    // Only Mr. X can use black tickets
+    if (player.role !== 'mr-x') {
+      return {
+        valid: false,
+        error: 'Only Mr. X can use black tickets',
+      };
+    }
+
+    // Check if player has black ticket
+    if (!hasTicket(player.tickets, 'black')) {
+      return {
+        valid: false,
+        error: 'Not enough black tickets',
+      };
+    }
+
+    // Black ticket can use ANY available transport from current station
+    // Check if there's ANY connection to the destination
+    const allTransports: TransportType[] = ['taxi', 'bus', 'underground', 'water'];
+    const hasConnection = allTransports.some(t =>
+      board.getValidMoves(fromId, t).includes(destinationId)
+    );
+
+    if (!hasConnection) {
+      return {
+        valid: false,
+        error: `No connection from station ${fromId} to ${destinationId}`,
+      };
+    }
+  } else {
+    // Regular transport validation
+    // Check if player has required ticket
+    if (!hasTicket(player.tickets, transport)) {
+      return {
+        valid: false,
+        error: `Not enough ${transport} tickets`,
+      };
+    }
+
+    // Check if connection exists with the specified transport type
+    const validMoves = board.getValidMoves(fromId, transport);
+    if (!validMoves.includes(destinationId)) {
+      return {
+        valid: false,
+        error: `No ${transport} connection from station ${fromId} to ${destinationId}`,
+      };
+    }
   }
 
   // Check if destination station exists
@@ -42,15 +85,6 @@ export function validateMove(
     return {
       valid: false,
       error: `Station ${destinationId} does not exist`,
-    };
-  }
-
-  // Check if connection exists with the specified transport type
-  const validMoves = board.getValidMoves(fromId, transport);
-  if (!validMoves.includes(destinationId)) {
-    return {
-      valid: false,
-      error: `No ${transport} connection from station ${fromId} to ${destinationId}`,
     };
   }
 
@@ -116,6 +150,33 @@ export function getValidMovesForPlayer(
         validMovesMap.set(destId, []);
       }
       validMovesMap.get(destId)!.push(transport);
+    }
+  }
+
+  // Mr. X can also use black tickets for ANY available connection
+  if (player.role === 'mr-x' && player.tickets.black > 0) {
+    // Black ticket can use any transport type
+    const allTransportTypes: TransportType[] = ['taxi', 'bus', 'underground', 'water'];
+
+    for (const transport of allTransportTypes) {
+      const destinations = board.getValidMoves(fromId, transport);
+
+      for (const destId of destinations) {
+        // Skip stations occupied by detectives
+        const isOccupiedByDetective = allPlayers.some(
+          (p) => p.position === destId && p.role === 'detective'
+        );
+        if (isOccupiedByDetective) continue;
+
+        // Add black as an option to this destination
+        if (!validMovesMap.has(destId)) {
+          validMovesMap.set(destId, []);
+        }
+        // Only add black if not already in the list
+        if (!validMovesMap.get(destId)!.includes('black')) {
+          validMovesMap.get(destId)!.push('black');
+        }
+      }
     }
   }
 

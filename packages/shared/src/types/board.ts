@@ -1,7 +1,8 @@
 /**
  * Transport types available in Scotland Yard
+ * - black: Mr. X only - can use any transport type
  */
-export type TransportType = 'taxi' | 'bus' | 'underground' | 'water';
+export type TransportType = 'taxi' | 'bus' | 'underground' | 'water' | 'black';
 
 /**
  * Station representation with position and available transport

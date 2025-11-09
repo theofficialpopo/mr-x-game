@@ -18,6 +18,8 @@ export interface TicketCounts {
   bus: number;
   underground: number;
   water: number;
+  black: number;      // Mr. X only - can use any transport
+  doubleMove: number; // Mr. X only - move twice in one turn
 }
 
 /**
@@ -79,24 +81,32 @@ export interface GameState {
 
 /**
  * Default ticket counts for detectives
- * According to Scotland Yard rules
+ * According to official Scotland Yard rules
  */
 export const DEFAULT_DETECTIVE_TICKETS: TicketCounts = {
   taxi: 11,
   bus: 8,
   underground: 4,
-  water: 0, // Detectives don't have water tickets
+  water: 0,       // Detectives don't have water tickets
+  black: 0,       // Detectives don't have black tickets
+  doubleMove: 0,  // Detectives don't have double move cards
 };
 
 /**
  * Default ticket counts for Mr. X
- * Mr. X has unlimited tickets except water
+ * According to official Scotland Yard rules:
+ * - Starts with limited regular tickets (4 taxi, 3 bus, 3 underground)
+ * - Has 5 black tickets (can use any transport)
+ * - Has 2 double move cards
+ * - Collects used tickets from detectives as the game progresses
  */
 export const DEFAULT_MR_X_TICKETS: TicketCounts = {
-  taxi: 999,
-  bus: 999,
-  underground: 999,
-  water: 2,
+  taxi: 4,
+  bus: 3,
+  underground: 3,
+  water: 0,       // Water not used in standard game
+  black: 5,       // Black tickets can use any transport
+  doubleMove: 2,  // Can move twice in one turn
 };
 
 /**

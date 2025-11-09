@@ -16,6 +16,7 @@ export class GameStateManager {
 
   /**
    * Apply a move to the database
+   * Implements Scotland Yard ticket transfer: detective tickets go to Mr. X
    */
   async applyMove(
     player: Player,
@@ -35,6 +36,12 @@ export class GameStateManager {
         tickets = ${JSON.stringify(newTickets)}::jsonb
       WHERE id = ${player.id}
     `;
+
+    // Scotland Yard rule: Detective tickets go to Mr. X
+    // Only transfer taxi/bus/underground tickets (not black, doubleMove, or water)
+    if (player.role === 'detective' && ['taxi', 'bus', 'underground'].includes(transport)) {
+      await this.transferTicketToMrX(transport);
+    }
 
     // Record move in history
     await sql`
@@ -56,6 +63,36 @@ export class GameStateManager {
     `;
 
     logger.info(`🎯 Player ${player.name} moved from ${oldPosition} to ${toStationId} via ${transport}`);
+  }
+
+  /**
+   * Transfer a used detective ticket to Mr. X's pool
+   */
+  private async transferTicketToMrX(transport: TransportType): Promise<void> {
+    // Get Mr. X's current tickets
+    const mrXData = await sql`
+      SELECT tickets FROM players
+      WHERE game_id = ${this.gameId} AND role = 'mr-x'
+      LIMIT 1
+    `;
+
+    if (mrXData.length === 0) return;
+
+    const mrXTickets = typeof mrXData[0].tickets === 'string'
+      ? JSON.parse(mrXData[0].tickets)
+      : mrXData[0].tickets;
+
+    // Add the detective's used ticket to Mr. X's pool
+    mrXTickets[transport]++;
+
+    // Update Mr. X's tickets
+    await sql`
+      UPDATE players
+      SET tickets = ${JSON.stringify(mrXTickets)}::jsonb
+      WHERE game_id = ${this.gameId} AND role = 'mr-x'
+    `;
+
+    logger.info(`🎫 Transferred ${transport} ticket to Mr. X`);
   }
 
   /**
