@@ -70,6 +70,9 @@ export function GameBoard({
 
     console.log('[Click] Station clicked:', stationId);
     console.log('[Click] Current player:', currentPlayer?.name, currentPlayer?.id);
+    console.log('[Click] Current player full data:', currentPlayer);
+    console.log('[Click] Current player tickets:', currentPlayer?.tickets);
+    console.log('[Click] Current player tickets type:', typeof currentPlayer?.tickets);
     console.log('[Click] My player ID (socket ID):', myPlayerId);
     console.log('[Click] All players:', players.map(p => ({ name: p.name, id: p.id, role: p.role })));
 
