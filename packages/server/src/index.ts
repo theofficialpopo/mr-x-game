@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeSocketIO } from './socket/server.js';
-import { initializeDatabase } from './config/database.js';
+import { initializeDatabase, closeDatabase } from './config/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,22 +67,29 @@ async function startServer() {
 
 startServer();
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('\n🛑 Shutting down server...');
+// Graceful shutdown handler
+async function gracefulShutdown(signal: string) {
+  console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
 
-  // Close HTTP server
-  httpServer.close(() => {
+  // Close HTTP server (stops accepting new connections)
+  httpServer.close(async () => {
     console.log('✅ HTTP server closed');
-    process.exit(0);
-  });
-});
 
-process.on('SIGTERM', async () => {
-  console.log('\n🛑 Shutting down server...');
-  httpServer.close(() => {
+    // Close database connections
+    await closeDatabase();
+
+    console.log('✅ Graceful shutdown complete');
     process.exit(0);
   });
-});
+
+  // Force shutdown after 10 seconds if graceful shutdown hangs
+  setTimeout(() => {
+    console.error('❌ Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 export { app };

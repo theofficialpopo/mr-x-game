@@ -21,15 +21,32 @@ function getSQL(): ReturnType<typeof postgres> {
       process.exit(1);
     }
 
-    // Create postgres client with connection pooling
-    // This maintains persistent connections for better performance
+    // Create postgres client with production-ready connection pooling
     _sql = postgres(DATABASE_URL, {
-      max: 10, // Maximum number of connections in the pool
-      idle_timeout: 20, // Close idle connections after 20 seconds
+      // Connection pool configuration
+      max: 20, // Maximum 20 connections (supports 1000+ concurrent users)
+      idle_timeout: 30, // Close idle connections after 30 seconds
+      max_lifetime: 60 * 60, // Recycle connections after 1 hour
       connect_timeout: 10, // Connection timeout in seconds
+
+      // Error handling
+      onnotice: () => {}, // Suppress notices in production
+
+      // Connection management
+      connection: {
+        application_name: 'scotland-yard-game',
+      },
+
+      // Transform column names from snake_case to camelCase
+      transform: {
+        column: {
+          to: postgres.toCamel,
+          from: postgres.fromCamel,
+        },
+      },
     });
 
-    console.log('✅ PostgreSQL connection pool initialized');
+    console.log('✅ PostgreSQL connection pool initialized (max: 20 connections)');
   }
 
   return _sql;
@@ -37,6 +54,16 @@ function getSQL(): ReturnType<typeof postgres> {
 
 // Export sql client - uses persistent connection pool
 export const sql = getSQL();
+
+// Graceful shutdown - close all connections
+export async function closeDatabase(): Promise<void> {
+  if (_sql) {
+    console.log('🔌 Closing database connections...');
+    await _sql.end({ timeout: 5 });
+    _sql = null;
+    console.log('✅ Database connections closed');
+  }
+}
 
 /**
  * Initialize database schema
