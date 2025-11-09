@@ -227,7 +227,7 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
               variant="primary"
               size="lg"
               fullWidth
-              glow={playerName.trim()}
+              glow={!!playerName.trim()}
             >
               Create Game
             </Button>
@@ -238,7 +238,7 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
               variant="secondary"
               size="lg"
               fullWidth
-              glow={playerName.trim()}
+              glow={!!playerName.trim()}
             >
               Join Game
             </Button>
@@ -323,7 +323,7 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
                 variant="secondary"
                 size="lg"
                 fullWidth
-                glow={!isConnecting && gameId.trim()}
+                glow={!isConnecting && !!gameId.trim()}
               >
                 {isConnecting ? 'Joining...' : 'Join'}
               </Button>
