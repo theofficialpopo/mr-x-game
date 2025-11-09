@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { socketService } from '../../services/socket';
 import { setGameId as saveGameIdToSession, setPlayerName as savePlayerNameToSession, getSession, hasActiveSessionForGame, clearSession } from '../../services/session';
 import type { LobbyState } from '@shared';
+import { Button } from '../ui';
 
 interface LobbyProps {
   onGameStart: () => void;
@@ -220,23 +221,27 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
               </div>
             )}
 
-            <button
+            <Button
               onClick={() => setMode('create')}
               disabled={!playerName.trim()}
-              className="w-full px-6 py-3 bg-cyan-500 bg-opacity-20 border-2 border-cyan-500 text-cyan-400 rounded-lg font-semibold hover:bg-opacity-30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ boxShadow: playerName.trim() ? '0 0 20px rgba(6, 182, 212, 0.3)' : 'none' }}
+              variant="primary"
+              size="lg"
+              fullWidth
+              glow={playerName.trim()}
             >
               Create Game
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={() => setMode('join')}
               disabled={!playerName.trim()}
-              className="w-full px-6 py-3 bg-purple-500 bg-opacity-20 border-2 border-purple-500 text-purple-400 rounded-lg font-semibold hover:bg-opacity-30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ boxShadow: playerName.trim() ? '0 0 20px rgba(168, 85, 247, 0.3)' : 'none' }}
+              variant="secondary"
+              size="lg"
+              fullWidth
+              glow={playerName.trim()}
             >
               Join Game
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -262,21 +267,25 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
             )}
 
             <div className="flex gap-3">
-              <button
+              <Button
                 onClick={handleCreateGame}
                 disabled={isConnecting}
-                className="flex-1 px-6 py-3 bg-cyan-500 bg-opacity-20 border-2 border-cyan-500 text-cyan-400 rounded-lg font-semibold hover:bg-opacity-30 transition disabled:opacity-50"
-                style={{ boxShadow: isConnecting ? 'none' : '0 0 20px rgba(6, 182, 212, 0.3)' }}
+                variant="primary"
+                size="lg"
+                fullWidth
+                glow={!isConnecting}
               >
                 {isConnecting ? 'Creating...' : 'Create'}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setMode('menu')}
                 disabled={isConnecting}
-                className="flex-1 px-6 py-3 bg-gray-800 bg-opacity-50 border border-gray-700 text-gray-300 rounded-lg font-semibold hover:bg-gray-700 transition disabled:opacity-50"
+                variant="ghost"
+                size="lg"
+                fullWidth
               >
                 Back
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -308,25 +317,29 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
             )}
 
             <div className="flex gap-3">
-              <button
+              <Button
                 onClick={handleJoinGame}
                 disabled={isConnecting || !gameId.trim()}
-                className="flex-1 px-6 py-3 bg-purple-500 bg-opacity-20 border-2 border-purple-500 text-purple-400 rounded-lg font-semibold hover:bg-opacity-30 transition disabled:opacity-50"
-                style={{ boxShadow: isConnecting || !gameId.trim() ? 'none' : '0 0 20px rgba(168, 85, 247, 0.3)' }}
+                variant="secondary"
+                size="lg"
+                fullWidth
+                glow={!isConnecting && gameId.trim()}
               >
                 {isConnecting ? 'Joining...' : 'Join'}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   setMode('menu');
                   setGameId('');
                   setError('');
                 }}
                 disabled={isConnecting}
-                className="flex-1 px-6 py-3 bg-gray-800 bg-opacity-50 border border-gray-700 text-gray-300 rounded-lg font-semibold hover:bg-gray-700 transition disabled:opacity-50"
+                variant="ghost"
+                size="lg"
+                fullWidth
               >
                 Back
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -378,16 +391,18 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
             </div>
 
             {/* Copy Invite Button */}
-            <button
+            <Button
               onClick={handleCopyInvite}
-              className="w-full px-4 py-3 bg-purple-500 bg-opacity-20 border border-purple-500 text-purple-400 rounded-lg font-semibold hover:bg-opacity-30 transition flex items-center justify-center gap-2"
-              style={{ boxShadow: '0 0 20px rgba(168, 85, 247, 0.2)' }}
+              variant="secondary"
+              size="md"
+              fullWidth
+              glow
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
               Copy Invite Link
-            </button>
+            </Button>
 
             <div className="space-y-2">
               <p className="text-sm text-gray-400 uppercase tracking-wide">
@@ -432,43 +447,44 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
 
             <div className="flex gap-3">
               {!isHost && (
-                <button
+                <Button
                   onClick={handleReady}
-                  className={`flex-1 px-6 py-3 rounded-lg font-semibold transition border-2 ${
-                    me?.isReady
-                      ? 'bg-green-500 bg-opacity-20 border-green-500 text-green-400 hover:bg-opacity-30'
-                      : 'bg-gray-800 bg-opacity-50 border-gray-600 text-gray-300 hover:bg-gray-700'
-                  }`}
-                  style={{
-                    boxShadow: me?.isReady ? '0 0 20px rgba(34, 197, 94, 0.3)' : 'none'
-                  }}
+                  variant={me?.isReady ? "primary" : "ghost"}
+                  size="lg"
+                  fullWidth
+                  active={me?.isReady}
+                  glow={me?.isReady}
                 >
                   {me?.isReady ? '✓ Ready' : 'Ready Up'}
-                </button>
+                </Button>
               )}
 
               {isHost && (
-                <button
+                <Button
                   onClick={handleStartGame}
                   disabled={!canStart}
-                  className="flex-1 px-6 py-3 bg-cyan-500 bg-opacity-20 border-2 border-cyan-500 text-cyan-400 rounded-lg font-semibold hover:bg-opacity-30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ boxShadow: canStart ? '0 0 20px rgba(6, 182, 212, 0.3)' : 'none' }}
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  glow={canStart}
                 >
                   {lobby.players.length < 2
                     ? 'Waiting for players...'
                     : !allReady
                     ? 'Waiting for ready...'
                     : 'Start Game'}
-                </button>
+                </Button>
               )}
 
-              <button
+              <Button
                 onClick={handleLeave}
-                className="px-6 py-3 bg-red-500 bg-opacity-20 border-2 border-red-500 text-red-400 rounded-lg font-semibold hover:bg-opacity-30 transition"
+                variant="outline"
+                size="lg"
+                className="border-red-500 text-red-400 hover:border-red-400 bg-red-500 bg-opacity-20 hover:bg-opacity-30"
                 style={{ boxShadow: '0 0 20px rgba(239, 68, 68, 0.2)' }}
               >
                 Leave
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import type { TransportType } from '@shared/types/board';
 import { useGameStore } from '../../store/gameStore';
 import { TRANSPORT_INFO } from '@shared';
+import { Button, Card } from '../ui';
 
 interface TransportModalProps {
   stationId: number;
@@ -29,9 +30,9 @@ export function TransportModal({ stationId, availableTransports, onClose }: Tran
 
       {/* Modal */}
       <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
-        <div className="bg-gray-900 rounded-xl border border-gray-700 shadow-2xl max-w-md w-full pointer-events-auto">
+        <div className="bg-black bg-opacity-60 backdrop-blur-sm rounded-lg border border-gray-700 shadow-2xl max-w-md w-full pointer-events-auto">
           {/* Header */}
-          <div className="p-6 border-b border-gray-700">
+          <div className="p-4 border-b border-gray-700">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-bold text-white">Select Transport</h3>
@@ -61,7 +62,7 @@ export function TransportModal({ stationId, availableTransports, onClose }: Tran
           </div>
 
           {/* Transport Options */}
-          <div className="p-6 space-y-3">
+          <div className="p-4 space-y-2">
             {availableTransports.map((transport) => {
               const info = TRANSPORT_INFO[transport];
               const ticketCount = currentPlayer.tickets[transport];
@@ -112,13 +113,14 @@ export function TransportModal({ stationId, availableTransports, onClose }: Tran
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-gray-700">
-            <button
+          <div className="p-4 border-t border-gray-700">
+            <Button
               onClick={onClose}
-              className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg font-semibold transition"
+              variant="ghost"
+              fullWidth
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       </div>

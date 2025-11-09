@@ -1,6 +1,7 @@
 import { useGameStore } from '../../store/gameStore';
 import { socketService } from '../../services/socket';
 import { useState, useEffect } from 'react';
+import { Button, RoleIcon } from '../ui';
 
 interface GameOverProps {
   onBackToLobby: () => void;
@@ -128,11 +129,7 @@ export function GameOver({ onBackToLobby }: GameOverProps) {
                   >
                     <div className="flex items-center gap-2">
                       {/* Role Icon */}
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-lg border-2 flex-shrink-0 ${playerColors.bg} bg-opacity-20 ${playerColors.border}`}
-                      >
-                        {player.role === 'mr-x' ? '❓' : '🔍'}
-                      </div>
+                      <RoleIcon role={player.role} size="md" />
 
                       {/* Player Info */}
                       <div className="flex-1 min-w-0">
@@ -159,31 +156,28 @@ export function GameOver({ onBackToLobby }: GameOverProps) {
 
           {/* Action Buttons */}
           <div className="flex gap-3">
-            <button
+            <Button
               onClick={handleReady}
-              className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all border-2 ${
-                isReady
-                  ? 'bg-green-500 bg-opacity-20 border-green-500 text-green-400 hover:bg-opacity-30'
-                  : 'bg-gray-800 bg-opacity-50 border-gray-600 text-gray-300 hover:bg-gray-700'
-              }`}
-              style={{
-                boxShadow: isReady
-                  ? '0 0 20px rgba(34, 197, 94, 0.3)'
-                  : 'none'
-              }}
+              variant={isReady ? "primary" : "ghost"}
+              size="lg"
+              fullWidth
+              active={isReady}
+              glow={isReady}
             >
               {isReady ? '✓ Ready' : 'Ready for Rematch'}
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={onBackToLobby}
-              className="px-6 py-3 bg-red-500 bg-opacity-20 border-2 border-red-500 text-red-400 rounded-lg font-semibold hover:bg-opacity-30 transition-all"
+              variant="outline"
+              size="lg"
+              className="border-red-500 text-red-400 hover:border-red-400 bg-red-500 bg-opacity-20 hover:bg-opacity-30"
               style={{
                 boxShadow: '0 0 20px rgba(239, 68, 68, 0.2)'
               }}
             >
               Leave Game
-            </button>
+            </Button>
           </div>
 
           {allReady && (
