@@ -73,6 +73,8 @@ export interface ClientGameState {
   winner: 'mr-x' | 'detectives' | null;
   // Double move tracking
   isDoubleMoveActive?: boolean; // True when Mr. X is in middle of double move
+  // Move history (for clipboard)
+  moveHistory: import('./game').Move[];
 }
 
 /**

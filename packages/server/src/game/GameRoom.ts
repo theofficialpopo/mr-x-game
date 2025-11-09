@@ -435,6 +435,7 @@ export class GameRoom {
       isMrXRevealed,
       winner: gameState.winner,
       isDoubleMoveActive: gameState.isDoubleMoveActive,
+      moveHistory: gameState.moveHistory,
     };
   }
 

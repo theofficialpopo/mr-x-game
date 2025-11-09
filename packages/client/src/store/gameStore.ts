@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type {
   Player,
   GamePhase,
+  Move,
 } from '@shared/types/game';
 import type { TransportType } from '@shared/types/board';
 import type { ClientGameState } from '@shared/types/socket';
@@ -27,6 +28,7 @@ interface GameStore {
   revealRounds: number[];
   winner: 'mr-x' | 'detectives' | null;
   isDoubleMoveActive: boolean;
+  moveHistory: Move[];
 
   // WebSocket connection
   initializeWebSocket: () => void;
@@ -59,6 +61,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   revealRounds: [...MR_X_REVEAL_ROUNDS],
   winner: null,
   isDoubleMoveActive: false,
+  moveHistory: [],
 
   setBoard: (board: Board) => set({ board }),
 
@@ -124,6 +127,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       revealRounds: state.revealRounds,
       winner: state.winner,
       isDoubleMoveActive: state.isDoubleMoveActive || false,
+      moveHistory: state.moveHistory || [],
     });
     logger.info('✅ Game state updated');
   },
@@ -141,6 +145,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       revealRounds: [...MR_X_REVEAL_ROUNDS],
       winner: null,
       isDoubleMoveActive: false,
+      moveHistory: [],
     });
   },
 

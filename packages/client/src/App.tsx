@@ -4,6 +4,7 @@ import { Lobby } from './components/GameUI/Lobby';
 import { RoundTracker } from './components/GameUI/RoundTracker';
 import { PlayerPanel } from './components/GameUI/PlayerPanel';
 import { TransportLegend } from './components/GameUI/TransportLegend';
+import { MoveHistoryClipboard } from './components/GameUI/MoveHistoryClipboard';
 import { GameBoard } from './components/Board/GameBoard';
 import { GameOver } from './components/GameUI/GameOver';
 import { useBoardData } from './hooks/useBoardData';
@@ -93,6 +94,9 @@ function GameContainer({ gameIdFromUrl }: { gameIdFromUrl?: string }) {
       <div className="flex-1 relative">
         {/* Left Player Panel */}
         <PlayerPanel />
+
+        {/* Right Move History Clipboard */}
+        <MoveHistoryClipboard />
 
         {/* Game Board */}
         <GameBoard
