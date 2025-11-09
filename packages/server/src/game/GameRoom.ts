@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { sql } from '../config/database.js';
 import { PlayerManager } from './PlayerManager.js';
+import { logger } from '../utils/logger.js';
 import {
   Board,
   validateMove,
@@ -50,7 +51,7 @@ export class GameRoom {
       VALUES (${gameId}, 'waiting', 0, 1)
     `;
 
-    console.log(`🎮 Created game room: ${gameId}`);
+    logger.info(`🎮 Created game room: ${gameId}`);
     return room;
   }
 
@@ -141,7 +142,7 @@ export class GameRoom {
       WHERE id = ${this.gameId}
     `;
 
-    console.log(`🎮 Game ${this.gameId} started with ${players.length} players`);
+    logger.info(`🎮 Game ${this.gameId} started with ${players.length} players`);
     return true;
   }
 
@@ -268,7 +269,7 @@ export class GameRoom {
       `;
     }
 
-    console.log(
+    logger.info(
       `🎯 Player ${currentPlayer.name} moved from ${oldPosition} to ${stationId} via ${transport}`
     );
 
@@ -469,7 +470,7 @@ export class GameRoom {
       WHERE id = ${this.gameId}
     `;
 
-    console.log(`🔄 Game ${this.gameId} reset for rematch with ${players.length} players`);
+    logger.info(`🔄 Game ${this.gameId} reset for rematch with ${players.length} players`);
   }
 
   /**
@@ -480,7 +481,7 @@ export class GameRoom {
       DELETE FROM games WHERE id = ${this.gameId}
     `;
 
-    console.log(`🗑️  Destroyed game room: ${this.gameId}`);
+    logger.info(`🗑️  Destroyed game room: ${this.gameId}`);
   }
 
   /**

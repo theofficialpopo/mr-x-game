@@ -4,6 +4,7 @@ import { socketService } from '../../services/socket';
 import { setGameId as saveGameIdToSession, setPlayerName as savePlayerNameToSession, getSession, hasActiveSessionForGame, clearSession } from '../../services/session';
 import type { LobbyState } from '@shared';
 import { Button } from '../ui';
+import { logger } from '../../utils/logger';
 
 interface LobbyProps {
   onGameStart: () => void;
@@ -52,7 +53,7 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
 
       // If on main lobby and have active session, redirect to game URL
       if (!initialGameId && session.gameId && session.playerName) {
-        console.log(`[Reconnect] Found active session for game ${session.gameId}, redirecting...`);
+        logger.info(`[Reconnect] Found active session for game ${session.gameId}, redirecting...`);
         navigate(`/${session.gameId}`);
         return;
       }
@@ -63,7 +64,7 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
 
         if (!hasSession) {
           // No session for this game - show join screen with game ID pre-filled
-          console.log(`[Reconnect] No session for game ${initialGameId}, showing join screen`);
+          logger.info(`[Reconnect] No session for game ${initialGameId}, showing join screen`);
           setMode('join');
           setGameId(initialGameId);
           setIsConnecting(false);
@@ -72,7 +73,7 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
 
         // Have valid session - try to reconnect
         if (session.playerName) {
-          console.log(`[Reconnect] Attempting to rejoin game ${initialGameId} as ${session.playerName}`);
+          logger.info(`[Reconnect] Attempting to rejoin game ${initialGameId} as ${session.playerName}`);
           setIsConnecting(true);
 
           // Wait for socket to connect if not connected
@@ -83,7 +84,7 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
           }
 
           if (!socketService.isConnected()) {
-            console.log('[Reconnect] Connection timeout - clearing session and redirecting to lobby');
+            logger.info('[Reconnect] Connection timeout - clearing session and redirecting to lobby');
             clearSession();
             navigate('/');
             return;
@@ -93,11 +94,11 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
           const response = await socketService.joinGame(initialGameId, session.playerName);
 
           if (!response.success) {
-            console.log('[Reconnect] Failed:', response.error, '- clearing session and redirecting to lobby');
+            logger.info('[Reconnect] Failed:', response.error, '- clearing session and redirecting to lobby');
             clearSession();
             navigate('/');
           } else {
-            console.log('[Reconnect] Success!');
+            logger.info('[Reconnect] Success!');
           }
         }
       }
@@ -115,11 +116,11 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
     setIsConnecting(true);
     setError('');
 
-    console.log('[Lobby] Creating game for player:', playerName.trim());
+    logger.info('[Lobby] Creating game for player:', playerName.trim());
     const response = await socketService.createGame(playerName.trim());
 
     if (response.success && response.gameId) {
-      console.log('[Lobby] Game created:', response.gameId);
+      logger.info('[Lobby] Game created:', response.gameId);
       // Save to session for reconnection
       saveGameIdToSession(response.gameId);
       savePlayerNameToSession(playerName.trim());
@@ -127,7 +128,7 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
       setGameId(response.gameId);
       // Navigate to game URL
       navigate(`/${response.gameId}`);
-      console.log('[Lobby] Navigated to game URL');
+      logger.info('[Lobby] Navigated to game URL');
       // Lobby update will come via socket event
     } else {
       setError(response.error || 'Failed to create game');
@@ -149,18 +150,18 @@ export function Lobby({ onGameStart, initialGameId }: LobbyProps) {
     setIsConnecting(true);
     setError('');
 
-    console.log('[Lobby] Joining game:', gameId.trim().toUpperCase(), 'as', playerName.trim());
+    logger.info('[Lobby] Joining game:', gameId.trim().toUpperCase(), 'as', playerName.trim());
     const response = await socketService.joinGame(gameId.trim().toUpperCase(), playerName.trim());
 
     if (response.success) {
       const normalizedGameId = gameId.trim().toUpperCase();
-      console.log('[Lobby] Successfully joined game:', normalizedGameId);
+      logger.info('[Lobby] Successfully joined game:', normalizedGameId);
       // Save to session for reconnection
       saveGameIdToSession(normalizedGameId);
       savePlayerNameToSession(playerName.trim());
       // Navigate to game URL
       navigate(`/${normalizedGameId}`);
-      console.log('[Lobby] Navigated to game URL');
+      logger.info('[Lobby] Navigated to game URL');
       // Lobby update will come via socket event
     } else {
       setError(response.error || 'Failed to join game');

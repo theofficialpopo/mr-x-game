@@ -3,6 +3,8 @@
  * Handles reconnection and rejoin logic
  */
 
+import { logger } from '../utils/logger';
+
 export interface PlayerSession {
   playerUUID: string;
   gameId: string | null;
@@ -43,11 +45,11 @@ export function getSession(): PlayerSession {
       }
 
       // Session expired - clear it from localStorage
-      console.log('[Session] Session expired (age: ' + Math.round(age / 1000 / 60) + ' minutes), clearing...');
+      logger.info('[Session] Session expired (age: ' + Math.round(age / 1000 / 60) + ' minutes), clearing...');
       clearSession();
     }
   } catch (error) {
-    console.error('[Session] Failed to load session:', error);
+    logger.error('[Session] Failed to load session:', error);
   }
 
   // Create new session
@@ -91,7 +93,7 @@ function saveSession(session: PlayerSession): void {
   try {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   } catch (error) {
-    console.error('Failed to save session to localStorage:', error);
+    logger.error('Failed to save session to localStorage:', error);
   }
 }
 
@@ -102,7 +104,7 @@ export function clearSession(): void {
   try {
     localStorage.removeItem(SESSION_KEY);
   } catch (error) {
-    console.error('Failed to clear session from localStorage:', error);
+    logger.error('Failed to clear session from localStorage:', error);
   }
 }
 
@@ -149,11 +151,11 @@ function cleanupExpiredSession(): void {
     const age = now - session.timestamp;
 
     if (age >= SESSION_EXPIRY_MS) {
-      console.log('[Session] Auto-cleanup: Removing expired session (age: ' + Math.round(age / 1000 / 60) + ' minutes)');
+      logger.info('[Session] Auto-cleanup: Removing expired session (age: ' + Math.round(age / 1000 / 60) + ' minutes)');
       clearSession();
     }
   } catch (error) {
-    console.error('[Session] Auto-cleanup failed:', error);
+    logger.error('[Session] Auto-cleanup failed:', error);
   }
 }
 
@@ -169,5 +171,5 @@ export function initializeSessionCleanup(): void {
   const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
   setInterval(cleanupExpiredSession, CLEANUP_INTERVAL_MS);
 
-  console.log('[Session] Auto-cleanup initialized (checks every 5 minutes)');
+  logger.info('[Session] Auto-cleanup initialized (checks every 5 minutes)');
 }

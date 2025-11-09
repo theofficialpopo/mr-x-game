@@ -4,6 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import type { Station, Connection } from '@shared/types/board';
 import type { Player } from '@shared/types/game';
 import { TRANSPORT_COLORS } from '@shared';
+import { logger } from '../../utils/logger';
 
 interface MapboxBoardProps {
   stations: Station[];
@@ -29,31 +30,31 @@ export function MapboxBoard({
 
   // Initialize map
   useEffect(() => {
-    console.log('🗺️ MapboxBoard useEffect triggered');
+    logger.info('🗺️ MapboxBoard useEffect triggered');
 
     if (map.current) {
-      console.log('⏭️ Map already initialized, skipping');
+      logger.info('⏭️ Map already initialized, skipping');
       return;
     }
 
     if (!mapContainer.current) {
-      console.log('⚠️ Map container not ready yet');
+      logger.info('⚠️ Map container not ready yet');
       return;
     }
 
     // Check for Mapbox token
     const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-    console.log('🔑 Mapbox token check:', token ? `Found (${token.substring(0, 20)}...)` : 'NOT FOUND');
+    logger.info('🔑 Mapbox token check:', token ? `Found (${token.substring(0, 20)}...)` : 'NOT FOUND');
 
     if (!token) {
-      console.error('❌ Mapbox token not found!');
-      console.error('💡 Make sure VITE_MAPBOX_ACCESS_TOKEN is set in .env');
-      console.error('🔄 Restart the dev server after adding the token: pnpm dev');
+      logger.error('❌ Mapbox token not found!');
+      logger.error('💡 Make sure VITE_MAPBOX_ACCESS_TOKEN is set in .env');
+      logger.error('🔄 Restart the dev server after adding the token: pnpm dev');
       return;
     }
 
     mapboxgl.accessToken = token;
-    console.log('✅ Mapbox access token set');
+    logger.info('✅ Mapbox access token set');
 
     // Get center from first station with geo coordinates
     const centerStation = stations.find(s => s.geoCoordinates);
@@ -61,10 +62,10 @@ export function MapboxBoard({
       ? [centerStation.geoCoordinates.lng, centerStation.geoCoordinates.lat]
       : [-0.1278, 51.5074]; // London center fallback
 
-    console.log('📍 Map center:', center, 'from station:', centerStation?.id || 'fallback');
+    logger.info('📍 Map center:', center, 'from station:', centerStation?.id || 'fallback');
 
     try {
-      console.log('🏗️ Creating Mapbox map instance...');
+      logger.info('🏗️ Creating Mapbox map instance...');
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v12', // Light streets theme
@@ -74,30 +75,30 @@ export function MapboxBoard({
         bearing: 0,
         antialias: true,
       });
-      console.log('✅ Map instance created successfully');
+      logger.info('✅ Map instance created successfully');
 
       // Add navigation controls
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      console.log('✅ Navigation controls added');
+      logger.info('✅ Navigation controls added');
 
       // Add error handler
       map.current.on('error', (e) => {
-        console.error('❌ Mapbox error:', e);
+        logger.error('❌ Mapbox error:', e);
       });
 
       map.current.on('load', () => {
-        console.log('🎉 Map loaded successfully!');
+        logger.info('🎉 Map loaded successfully!');
         setMapLoaded(true);
         addLayers();
       });
 
-      console.log('👂 Map load event listener attached');
+      logger.info('👂 Map load event listener attached');
     } catch (error) {
-      console.error('❌ Error creating map:', error);
+      logger.error('❌ Error creating map:', error);
     }
 
     return () => {
-      console.log('🧹 Cleaning up map instance');
+      logger.info('🧹 Cleaning up map instance');
       if (map.current) {
         map.current.remove();
         map.current = null;
@@ -107,9 +108,9 @@ export function MapboxBoard({
 
   // Add map layers
   const addLayers = () => {
-    console.log('🎨 addLayers called');
+    logger.info('🎨 addLayers called');
     if (!map.current) {
-      console.error('❌ Map instance not available in addLayers');
+      logger.error('❌ Map instance not available in addLayers');
       return;
     }
 

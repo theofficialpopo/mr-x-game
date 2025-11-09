@@ -2,6 +2,7 @@ import postgres from 'postgres';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,7 +51,7 @@ function getSQL(): ReturnType<typeof postgres> {
       },
     });
 
-    console.log('✅ PostgreSQL connection pool initialized (max: 20 connections)');
+    logger.info('✅ PostgreSQL connection pool initialized (max: 20 connections)');
   }
 
   return _sql;
@@ -62,10 +63,10 @@ export const sql = getSQL();
 // Graceful shutdown - close all connections
 export async function closeDatabase(): Promise<void> {
   if (_sql) {
-    console.log('🔌 Closing database connections...');
+    logger.info('🔌 Closing database connections...');
     await _sql.end({ timeout: 5 });
     _sql = null;
-    console.log('✅ Database connections closed');
+    logger.info('✅ Database connections closed');
   }
 }
 
@@ -75,9 +76,9 @@ export async function closeDatabase(): Promise<void> {
 export async function initializeDatabase(): Promise<void> {
   try {
     // Test database connection
-    console.log('🔌 Testing database connection...');
+    logger.info('🔌 Testing database connection...');
     await sql`SELECT 1 as health_check`;
-    console.log('✅ Database connection successful');
+    logger.info('✅ Database connection successful');
 
     // Read schema file
     const schemaPath = path.join(__dirname, '../db/schema.sql');
@@ -94,19 +95,19 @@ export async function initializeDatabase(): Promise<void> {
       .map(s => s.trim())
       .filter(s => s.length > 0);
 
-    console.log(`Executing ${statements.length} SQL statements...`);
+    logger.debug(`Executing ${statements.length} SQL statements...`);
 
     // Execute each statement individually
     for (const statement of statements) {
       await sql.unsafe(statement);
     }
 
-    console.log('✅ Database schema initialized');
+    logger.info('✅ Database schema initialized');
 
     // Run migrations
     await runMigrations();
   } catch (error) {
-    console.error('❌ Failed to initialize database:', error);
+    logger.error('❌ Failed to initialize database:', error);
     throw error;
   }
 }
@@ -122,7 +123,7 @@ async function runMigrations(): Promise<void> {
     try {
       await fs.access(migrationsDir);
     } catch {
-      console.log('No migrations directory found, skipping migrations');
+      logger.debug('No migrations directory found, skipping migrations');
       return;
     }
 
@@ -131,11 +132,11 @@ async function runMigrations(): Promise<void> {
     const migrationFiles = files.filter(f => f.endsWith('.sql')).sort();
 
     if (migrationFiles.length === 0) {
-      console.log('No migrations found');
+      logger.debug('No migrations found');
       return;
     }
 
-    console.log(`Running ${migrationFiles.length} migrations...`);
+    logger.info(`Running ${migrationFiles.length} migrations...`);
 
     for (const file of migrationFiles) {
       const migrationPath = path.join(migrationsDir, file);
@@ -154,10 +155,10 @@ async function runMigrations(): Promise<void> {
         await sql.unsafe(statement);
       }
 
-      console.log(`✅ Applied migration: ${file}`);
+      logger.info(`✅ Applied migration: ${file}`);
     }
   } catch (error) {
-    console.error('❌ Failed to run migrations:', error);
+    logger.error('❌ Failed to run migrations:', error);
     // Don't throw - migrations are optional and shouldn't break the app
   }
 }
@@ -174,10 +175,10 @@ export async function cleanupOldGames(): Promise<void> {
     `;
 
     if (result.length > 0) {
-      console.log(`🗑️  Cleaned up ${result.length} old games`);
+      logger.info(`🗑️  Cleaned up ${result.length} old games`);
     }
   } catch (error) {
-    console.error('❌ Failed to cleanup old games:', error);
+    logger.error('❌ Failed to cleanup old games:', error);
   }
 }
 

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { GameRoom } from '../game/GameRoom.js';
 import { Board, parseBoardData } from '../../../shared/src/index.js';
 import { sql } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -61,14 +62,14 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
   // Load board data
   loadBoard().then(board => {
     boardInstance = board;
-    console.log('✅ Board data loaded for game server');
+    logger.info('✅ Board data loaded for game server');
   }).catch(err => {
-    console.error('❌ Failed to load board data:', err);
+    logger.error('❌ Failed to load board data:', err);
     process.exit(1);
   });
 
   io.on('connection', (socket) => {
-    console.log(`🔌 Client connected: ${socket.id}`);
+    logger.info(`🔌 Client connected: ${socket.id}`);
 
     /**
      * Create a new game room
@@ -122,9 +123,9 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
           io.to(gameId).emit('lobby:updated', lobby);
         }
 
-        console.log(`🎮 Created game ${gameId} for ${playerName}`);
+        logger.info(`🎮 Created game ${gameId} for ${playerName}`);
       } catch (error) {
-        console.error('Error creating game:', error);
+        logger.error('Error creating game:', error);
         callback({ success: false, error: 'Internal server error' });
       }
     });
@@ -153,10 +154,10 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
           return;
         }
 
-        console.log(`🎯 Join attempt: ${validatedName.data} (${socket.id}) -> game ${validatedGameId.data}, UUID: ${validatedUUID.data || 'none'}`);
+        logger.info(`🎯 Join attempt: ${validatedName.data} (${socket.id}) -> game ${validatedGameId.data}, UUID: ${validatedUUID.data || 'none'}`);
 
         if (!boardInstance) {
-          console.log('❌ Server not ready');
+          logger.info('❌ Server not ready');
           callback({ success: false, error: 'Server not ready' });
           return;
         }
@@ -164,10 +165,10 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
         // Get or load game room
         let gameRoom = gameRooms.get(validatedGameId.data);
         if (!gameRoom) {
-          console.log(`🔍 Loading game ${validatedGameId.data} from database...`);
+          logger.info(`🔍 Loading game ${validatedGameId.data} from database...`);
           const loadedRoom = await GameRoom.load(validatedGameId.data, boardInstance);
           if (!loadedRoom) {
-            console.log(`❌ Game ${validatedGameId.data} not found`);
+            logger.info(`❌ Game ${validatedGameId.data} not found`);
             callback({ success: false, error: 'Game not found' });
             return;
           }
@@ -176,14 +177,14 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
         }
 
         // Add player to lobby
-        console.log(`➕ Adding player ${validatedName.data} to game ${validatedGameId.data}...`);
+        logger.info(`➕ Adding player ${validatedName.data} to game ${validatedGameId.data}...`);
         const added = await gameRoom.addPlayer(socket.id, validatedName.data, validatedUUID.data);
         if (!added) {
-          console.log(`❌ Failed to add player ${playerName} to game ${gameId}`);
+          logger.info(`❌ Failed to add player ${playerName} to game ${gameId}`);
           callback({ success: false, error: 'Game is full' });
           return;
         }
-        console.log(`✅ Player ${playerName} added to game ${gameId}`);
+        logger.info(`✅ Player ${playerName} added to game ${gameId}`);
 
         // Join socket room
         await socket.join(gameId);
@@ -212,15 +213,15 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
           const clientState = await gameRoom.getClientGameState(socket.id);
           if (clientState) {
             socket.emit('game:state', clientState);
-            console.log(`📤 Sent game state to reconnecting player ${playerName}`);
+            logger.info(`📤 Sent game state to reconnecting player ${playerName}`);
           }
         }
 
-        console.log(`👤 ${playerName} joined game ${gameId}`);
+        logger.info(`👤 ${playerName} joined game ${gameId}`);
       } catch (error) {
-        console.error(`❌ Error joining game ${gameId}:`, error);
-        console.error('Error details:', error instanceof Error ? error.message : String(error));
-        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+        logger.error(`❌ Error joining game ${gameId}:`, error);
+        logger.error('Error details:', error instanceof Error ? error.message : String(error));
+        logger.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
         callback({ success: false, error: 'Internal server error' });
       }
     });
@@ -259,7 +260,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
 
         callback();
       } catch (error) {
-        console.error('Error leaving game:', error);
+        logger.error('Error leaving game:', error);
         callback();
       }
     });
@@ -283,7 +284,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
           io.to(gameId).emit('lobby:updated', lobby);
         }
       } catch (error) {
-        console.error('Error setting ready status:', error);
+        logger.error('Error setting ready status:', error);
       }
     });
 
@@ -312,20 +313,20 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
 
         // Send game state to all players
         const sockets = await io.in(gameId).fetchSockets();
-        console.log(`📤 Emitting game:state to ${sockets.length} sockets in room ${gameId}`);
+        logger.info(`📤 Emitting game:state to ${sockets.length} sockets in room ${gameId}`);
         for (const s of sockets) {
           const clientState = await gameRoom.getClientGameState(s.id);
           if (clientState) {
-            console.log(`📤 Emitting game:state to socket ${s.id}:`, { phase: clientState.phase, gameId: clientState.gameId });
+            logger.info(`📤 Emitting game:state to socket ${s.id}:`, { phase: clientState.phase, gameId: clientState.gameId });
             s.emit('game:state', clientState);
           } else {
-            console.log(`⚠️ No client state for socket ${s.id}`);
+            logger.info(`⚠️ No client state for socket ${s.id}`);
           }
         }
 
-        console.log(`🚀 Game ${gameId} started!`);
+        logger.info(`🚀 Game ${gameId} started!`);
       } catch (error) {
-        console.error('Error starting game:', error);
+        logger.error('Error starting game:', error);
         socket.emit('lobby:error', 'Failed to start game');
       }
     });
@@ -398,7 +399,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
           }, 60000); // 1 minute
         }
       } catch (error) {
-        console.error('Error making move:', error);
+        logger.error('Error making move:', error);
         callback({ success: false, error: 'Failed to make move' });
       }
     });
@@ -433,7 +434,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
         // If all players are ready, start a new game
         const allReady = players.every((p: any) => p.is_ready);
         if (allReady && players.length >= 2) {
-          console.log(`🔄 All players ready for rematch in game ${gameId}`);
+          logger.info(`🔄 All players ready for rematch in game ${gameId}`);
 
           // Reset game state while keeping players
           await gameRoom.resetForRematch();
@@ -443,7 +444,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
           for (const s of sockets) {
             const clientState = await gameRoom.getClientGameState(s.id);
             if (clientState) {
-              console.log(`📤 Emitting game:state to socket ${s.id}:`, {
+              logger.info(`📤 Emitting game:state to socket ${s.id}:`, {
                 phase: clientState.phase,
                 gameId: clientState.gameId,
               });
@@ -451,10 +452,10 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
             }
           }
 
-          console.log(`🚀 Rematch started for game ${gameId}!`);
+          logger.info(`🚀 Rematch started for game ${gameId}!`);
         }
       } catch (error) {
-        console.error('Error handling rematch ready:', error);
+        logger.error('Error handling rematch ready:', error);
       }
     });
 
@@ -462,11 +463,11 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer<Clien
      * Disconnect handler
      */
     socket.on('disconnect', async () => {
-      console.log(`🔌 Client disconnected: ${socket.id}`);
+      logger.info(`🔌 Client disconnected: ${socket.id}`);
 
       // Don't remove players on disconnect - allow reconnection
       // Players are only removed when they explicitly leave via 'lobby:leave'
-      console.log(`💾 Keeping player data for reconnection`);
+      logger.info(`💾 Keeping player data for reconnection`);
     });
   });
 

@@ -11,6 +11,7 @@ import {
 } from '@shared/index';
 import type { Board } from '@shared/index';
 import { socketService } from '../services/socket';
+import { logger } from '../utils/logger';
 
 interface GameStore {
   // Board reference (set externally)
@@ -87,7 +88,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       // Listen for game errors
       socketService.onGameError((error) => {
-        console.error('Game error:', error);
+        logger.error('Game error:', error);
       });
     };
 
@@ -110,8 +111,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * Update game state from server
    */
   updateGameState: (state: ClientGameState) => {
-    console.log('🔄 updateGameState called with:', state);
-    console.log('🔄 Setting phase to:', state.phase);
+    logger.info('🔄 updateGameState called with:', state);
+    logger.info('🔄 Setting phase to:', state.phase);
     set({
       gameId: state.gameId,
       phase: state.phase,
@@ -121,7 +122,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       revealRounds: state.revealRounds,
       winner: state.winner,
     });
-    console.log('✅ Game state updated');
+    logger.info('✅ Game state updated');
   },
 
   /**
@@ -147,13 +148,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { phase, players, currentPlayerIndex } = state;
 
     if (phase !== 'playing') {
-      console.error('Game is not in playing phase');
+      logger.error('Game is not in playing phase');
       return false;
     }
 
     const currentPlayer = players[currentPlayerIndex];
     if (!currentPlayer) {
-      console.error('No current player');
+      logger.error('No current player');
       return false;
     }
 
@@ -161,11 +162,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const response = await socketService.makeMove(destinationId, transport);
 
     if (response.success) {
-      console.log(`✅ Move successful: ${currentPlayer.name} -> station ${destinationId} via ${transport}`);
+      logger.info(`✅ Move successful: ${currentPlayer.name} -> station ${destinationId} via ${transport}`);
       // State will be updated via WebSocket event
       return true;
     } else {
-      console.error('❌ Move failed:', response.error);
+      logger.error('❌ Move failed:', response.error);
       return false;
     }
   },

@@ -12,6 +12,7 @@ import type {
   TransportType,
 } from '@shared';
 import { getPlayerUUID } from './session';
+import { logger } from '../utils/logger';
 
 /**
  * Socket.IO client for game communication
@@ -48,7 +49,7 @@ class SocketService {
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
+      logger.error('Connection error:', error);
     });
   }
 
@@ -212,7 +213,7 @@ class SocketService {
    * Set rematch ready status
    */
   setRematchReady(isReady: boolean): void {
-    console.log('Setting rematch ready:', isReady);
+    logger.info('Setting rematch ready:', isReady);
     this.socket?.emit('rematch:ready', isReady);
   }
 
